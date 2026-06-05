@@ -1,4 +1,4 @@
-<h1 align="center">Notionless</h1>
+<h1 align="center">Paperus</h1>
 
 <p align="center">
   <b>Open-source, local-first, zero-account, pure-P2P Notion alternative.</b><br>
@@ -14,14 +14,14 @@
 </p>
 
 <p align="center">
-  <img src="landing/hero.png" alt="Notionless desktop app — a Markdown workspace with a sidebar, teamspaces, and a welcome note" width="900">
+  <img src="landing/hero.png" alt="Paperus desktop app — a Markdown workspace with a sidebar, teamspaces, and a welcome note" width="900">
 </p>
 
 ---
 
 ## What it is
 
-Notionless is a Notion alternative that runs as a **macOS desktop app**. Your notes
+Paperus is a Notion alternative that runs as a **macOS desktop app**. Your notes
 are **plain Markdown files on disk** — you own them. There are **no accounts and no
 login**: install the app, create a team, and share **one link**. Teammates join
 instantly and edits sync **peer-to-peer over WebRTC**, end-to-end encrypted. The
@@ -169,7 +169,7 @@ or any coding agent) running on your server or laptop, and it sets everything up
 asking you for your domain along the way:
 
 ```text
-Set up Notionless (https://github.com/Naridon-Inc/Notionless) on this machine — a
+Set up Paperus (https://github.com/Naridon-Inc/paperus) on this machine — a
 self-hosted, end-to-end-encrypted, local-first Notion alternative. Steps:
 
 1. Make sure Docker + Docker Compose are installed and running (install if needed).
@@ -195,8 +195,8 @@ Web app **and** relay together, on your domain, with automatic Let's Encrypt HTT
 (via Caddy) and **no database**:
 
 ```bash
-git clone https://github.com/Naridon-Inc/Notionless.git
-cd Notionless
+git clone https://github.com/Naridon-Inc/paperus.git
+cd paperus
 cp .env.selfhost.example .env       # set NL_DOMAIN=docs.yourcompany.com
 docker compose -f docker-compose.selfhost.yml up -d
 ```
@@ -215,7 +215,7 @@ back to P2P from inside the app — click the sync dot next to a teamspace.)
 The UI is a static bundle, so any of these deploy it in a couple of clicks. A
 `vercel.json` and `netlify.toml` are already in the repo, so it's import-and-go:
 
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/Naridon-Inc/Notionless) &nbsp; [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FNaridon-Inc%2FNotionless&env=VITE_SIGNALING_URL&envDescription=Your%20relay's%20wss%3A%2F%2F...%2Fsignaling%20URL%20(or%20wss%3A%2F%2Foss.naridon.com%2Fsignaling))
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/Naridon-Inc/paperus) &nbsp; [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FNaridon-Inc%2Fpaperus&env=VITE_SIGNALING_URL&envDescription=Your%20relay's%20wss%3A%2F%2F...%2Fsignaling%20URL%20(or%20wss%3A%2F%2Foss.naridon.com%2Fsignaling))
 
 Build settings (already encoded in the config files):
 
@@ -272,7 +272,7 @@ Just want 24/7 sync with no web app? See
 
 ## Plugins
 
-Notionless is designed to be extended without forking — custom blocks, slash
+Paperus is designed to be extended without forking — custom blocks, slash
 commands, sidebar panels, AI providers, and import/export formats — through a
 **sandboxed, capability-scoped** plugin API. You can even **describe a plugin to
 Claude** and have it scaffolded and hot-loaded in-app. See
