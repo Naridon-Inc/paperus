@@ -32,8 +32,12 @@
 	handle /signaling {
 		reverse_proxy {$NL_RELAY_UPSTREAM:relay:9008}
 	}
-	# Optional always-on encrypted cloud sync (only if the relay enables it).
-	handle /yjs {
+	# Optional always-on encrypted cloud sync (only if the relay enables it). The
+	# y-websocket client connects to /yjs/<room> and the relay routes on the /yjs/
+	# prefix, so this MUST match the sub-path — a bare `handle /yjs` matches only
+	# the exact path, letting /yjs/<room> fall through to the SPA and silently
+	# breaking online sync.
+	handle /yjs/* {
 		reverse_proxy {$NL_RELAY_UPSTREAM:relay:9008}
 	}
 
