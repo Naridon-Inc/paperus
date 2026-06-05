@@ -5,3 +5,6 @@ ignoredBuiltDependencies:
   - electron-winstaller
   - esbuild
   - utf-8-validate
+
+patchedDependencies:
+  y-protocols@1.0.7: patches/y-protocols@1.0.7.patch

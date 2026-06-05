@@ -1,0 +1,22 @@
+diff --git a/awareness.js b/awareness.js
+index 8f9ae9448d19ce46a6cd76f8cdb8e2a0944f7bf5..2b4282ab58c5821499809659f7451e66bd398e22 100644
+--- a/awareness.js
++++ b/awareness.js
+@@ -173,7 +173,7 @@ export const removeAwarenessStates = (awareness, clients, origin) => {
+       if (clientID === awareness.clientID) {
+         const curMeta = /** @type {MetaClientState} */ (awareness.meta.get(clientID))
+         awareness.meta.set(clientID, {
+-          clock: curMeta.clock + 1,
++          clock: (curMeta ? curMeta.clock : 0) + 1,
+           lastUpdated: time.getUnixTime()
+         })
+       }
+@@ -198,7 +198,7 @@ export const encodeAwarenessUpdate = (awareness, clients, states = awareness.sta
+   for (let i = 0; i < len; i++) {
+     const clientID = clients[i]
+     const state = states.get(clientID) || null
+-    const clock = /** @type {MetaClientState} */ (awareness.meta.get(clientID)).clock
++    const clock = (/** @type {MetaClientState} */ (awareness.meta.get(clientID)) || { clock: 0 }).clock
+     encoding.writeVarUint(encoder, clientID)
+     encoding.writeVarUint(encoder, clock)
+     encoding.writeVarString(encoder, JSON.stringify(state))

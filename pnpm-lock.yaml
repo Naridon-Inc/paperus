@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  y-protocols@1.0.7:
+    hash: a6242614ca32fcb115259ef3dd26dcd3cca7a229b7a3ee2e1321ccffac347f80
+    path: patches/y-protocols@1.0.7.patch
+
 importers:
 
   .:
@@ -145,7 +150,7 @@ importers:
         version: 9.0.12(yjs@13.6.29)
       y-protocols:
         specifier: ^1.0.7
-        version: 1.0.7(yjs@13.6.29)
+        version: 1.0.7(patch_hash=a6242614ca32fcb115259ef3dd26dcd3cca7a229b7a3ee2e1321ccffac347f80)(yjs@13.6.29)
       y-quill:
         specifier: ^1.0.0
         version: 1.0.0(quill-cursors@4.0.4)(quill@2.0.3)(yjs@13.6.29)
@@ -3473,6 +3478,7 @@ packages:
   tar@7.5.7:
     resolution: {integrity: sha512-fov56fJiRuThVFXD6o6/Q354S7pnWMJIVlDBYijsTNx6jKSE4pvrDTs6lUnmGvNyfJwFQQwWy3owKz1ucIhveQ==}
     engines: {node: '>=18'}
+    deprecated: Old versions of tar are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
 
   temp-file@3.4.0:
     resolution: {integrity: sha512-C5tjlC/HCtVUOi3KWVokd4vHVViOmGjtLwIh4MuzPo/nMYTV/p1urt3RnMz2IWXDdKEGJH3k5+KPxtqRsUYGtg==}
@@ -7954,7 +7960,7 @@ snapshots:
       lib0: 0.2.117
       yjs: 13.6.29
 
-  y-protocols@1.0.7(yjs@13.6.29):
+  y-protocols@1.0.7(patch_hash=a6242614ca32fcb115259ef3dd26dcd3cca7a229b7a3ee2e1321ccffac347f80)(yjs@13.6.29):
     dependencies:
       lib0: 0.2.117
       yjs: 13.6.29
@@ -7964,14 +7970,14 @@ snapshots:
       lib0: 0.2.117
       quill: 2.0.3
       quill-cursors: 4.0.4
-      y-protocols: 1.0.7(yjs@13.6.29)
+      y-protocols: 1.0.7(patch_hash=a6242614ca32fcb115259ef3dd26dcd3cca7a229b7a3ee2e1321ccffac347f80)(yjs@13.6.29)
       yjs: 13.6.29
 
   y-webrtc@10.3.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)(yjs@13.6.29):
     dependencies:
       lib0: 0.2.117
       simple-peer: 9.11.1
-      y-protocols: 1.0.7(yjs@13.6.29)
+      y-protocols: 1.0.7(patch_hash=a6242614ca32fcb115259ef3dd26dcd3cca7a229b7a3ee2e1321ccffac347f80)(yjs@13.6.29)
       yjs: 13.6.29
     optionalDependencies:
       ws: 8.19.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
@@ -7983,7 +7989,7 @@ snapshots:
   y-websocket@3.0.0(yjs@13.6.29):
     dependencies:
       lib0: 0.2.117
-      y-protocols: 1.0.7(yjs@13.6.29)
+      y-protocols: 1.0.7(patch_hash=a6242614ca32fcb115259ef3dd26dcd3cca7a229b7a3ee2e1321ccffac347f80)(yjs@13.6.29)
       yjs: 13.6.29
 
   y18n@4.0.3: {}

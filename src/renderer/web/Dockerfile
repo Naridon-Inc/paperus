@@ -14,8 +14,12 @@ FROM node:20-alpine AS build
 WORKDIR /app
 # pnpm via corepack, pinned to the repo's packageManager.
 RUN corepack enable && corepack prepare pnpm@10.27.0 --activate
-# Lockfile-only install first for layer caching.
-COPY package.json pnpm-lock.yaml ./
+# Lockfile-only install first for layer caching. pnpm-workspace.yaml carries the
+# patchedDependencies config (y-protocols patch) and patches/ holds the patch
+# itself — both are REQUIRED or --frozen-lockfile aborts with
+# ERR_PNPM_LOCKFILE_CONFIG_MISMATCH.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY patches/ ./patches/
 # --frozen-lockfile fails loudly if the lockfile drifted; matches CI.
 RUN pnpm install --frozen-lockfile
 COPY . .
