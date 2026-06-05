@@ -1,0 +1,490 @@
+/* studio.css — all styles for the Plugin Studio view.
+ *
+ * Imported ONCE from plugin-studio.js (NOT from the host's style.css), per the
+ * Frozen Plugin Studio Contract v1 (§5.2). Uses the host theme variables
+ * (--bg, --text, --text-muted, --border, --accent, --editor-bg) so it tracks
+ * light/dark automatically, matching plugins.css.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * CONTRACT FOR THE EDITOR / PREVIEW / TRANSCRIPT BUILDER (studio-code-editor.js,
+ * studio-preview.js, studio-transcript.js): plugin-studio.js mounts your modules
+ * into these three host elements. Render INTO them; do not restyle the frames.
+ *
+ *   .studio-transcript   ← mountTranscript(el) renders the AgentEvent log here.
+ *                          It is a scrollable column. Emit rows with these classes
+ *                          so they pick up the styling below:
+ *                            .studio-ev               (a row wrapper)
+ *                            .studio-ev.text          assistant prose
+ *                            .studio-ev.tool          a tool/command run
+ *                            .studio-ev.file          a file write/create/delete
+ *                            .studio-ev.status        transient status
+ *                            .studio-ev.error         an error (also fed to self-heal)
+ *                            .studio-ev.done          the final summary
+ *                            .studio-ev-icon          leading icon span
+ *                            .studio-ev-body          the text body
+ *                            .studio-ev-pre           a <pre> for code/tool input
+ *
+ *   .studio-editor       ← mountCodeEditor(el, …) mounts the CM6 EditorView here.
+ *                          It is a flex column with a fixed min-height; the CM
+ *                          scroller should fill it (.cm-editor { height:100% }).
+ *
+ *   .studio-preview      ← mountPreview(el) mounts the live-preview surface here.
+ *                          The hidden sandbox iframe(s) it spins inherit the
+ *                          global .plugin-sandbox-frame hidden rule (plugins.css);
+ *                          render the *visible* preview output into a child you
+ *                          create, e.g. .studio-preview-surface.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+/* ── The Studio view container ─────────────────────────────────────────────── */
+#plugin-studio-view {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  background: var(--bg);
+}
+
+.plugin-studio {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 24px 64px;
+  color: var(--text);
+  font-size: 14px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Cards ─────────────────────────────────────────────────────────────────── */
+.plugin-studio .card {
+  background: var(--editor-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.studio-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.studio-card-title i { color: var(--accent); font-size: 12px; }
+
+/* ── Header ────────────────────────────────────────────────────────────────── */
+.studio-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.studio-title {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.studio-subtitle {
+  color: var(--text-muted);
+  font-size: 13px;
+  max-width: 560px;
+}
+
+.studio-header-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.studio-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.studio-field-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-muted);
+}
+
+.studio-provider-select,
+.studio-model-input {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 6px 9px;
+  font-size: 13px;
+  min-width: 180px;
+}
+
+.studio-model-input { min-width: 130px; }
+
+.studio-provider-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  min-height: 16px;
+}
+
+.studio-build-badge {
+  align-self: flex-end;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Start gallery ─────────────────────────────────────────────────────────── */
+.studio-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.studio-tpl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color .12s, background .12s;
+}
+
+.studio-tpl:hover { border-color: var(--accent); }
+.studio-tpl.selected { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.studio-tpl i { font-size: 18px; color: var(--accent); }
+.studio-tpl-label { font-size: 12px; }
+
+.studio-gallery-hint,
+.studio-selected-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 8px;
+  min-height: 16px;
+}
+
+/* ── Goal input + action bar ───────────────────────────────────────────────── */
+.studio-goal-input {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 64px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.studio-goal-input:focus { outline: none; border-color: var(--accent); }
+
+.studio-action-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.studio-action-spacer { flex: 1; }
+
+/* ── Buttons ───────────────────────────────────────────────────────────────── */
+.studio-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 7px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color .12s, background .12s, opacity .12s;
+}
+
+.studio-btn:hover:not(:disabled) { border-color: var(--accent); }
+.studio-btn:disabled { opacity: .5; cursor: default; }
+.studio-btn.small { padding: 7px 10px; }
+
+.studio-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.studio-btn.primary:hover:not(:disabled) { filter: brightness(1.05); }
+.studio-btn.busy { opacity: .7; cursor: progress; }
+.studio-btn i { font-size: 12px; }
+
+/* ── Status + readouts ─────────────────────────────────────────────────────── */
+.studio-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.studio-status-line {
+  font-size: 12px;
+  color: var(--text-muted);
+  min-height: 16px;
+  flex: 1;
+}
+
+.studio-readouts {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.studio-readout i { font-size: 11px; opacity: .8; }
+.studio-readout-sep { opacity: .5; }
+
+/* ── Workbench: transcript | editor+preview ────────────────────────────────── */
+.studio-workbench {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(360px, 1.4fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+@media (max-width: 900px) {
+  .studio-workbench { grid-template-columns: 1fr; }
+}
+
+.studio-pane {
+  background: var(--editor-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 420px;
+}
+
+.studio-pane-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.studio-pane-title i { color: var(--accent); font-size: 11px; }
+
+/* ── Transcript (host frame; rows styled for the transcript builder) ───────── */
+.studio-transcript {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 4px;
+}
+
+.studio-ev {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 6px 8px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+}
+
+.studio-ev-icon { flex-shrink: 0; width: 16px; text-align: center; color: var(--text-muted); }
+.studio-ev-body { min-width: 0; word-break: break-word; white-space: pre-wrap; }
+
+.studio-ev-pre {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: auto;
+}
+
+.studio-ev.text { background: var(--bg); }
+.studio-ev.tool { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.studio-ev.tool .studio-ev-icon { color: var(--accent); }
+.studio-ev.file .studio-ev-icon { color: #2e7d32; }
+.studio-ev.status { color: var(--text-muted); font-style: italic; padding: 2px 8px; }
+.studio-ev.error {
+  background: color-mix(in srgb, #d32f2f 9%, transparent);
+  border-color: color-mix(in srgb, #d32f2f 35%, transparent);
+  color: #b71c1c;
+}
+.studio-ev.error .studio-ev-icon { color: #d32f2f; }
+.studio-ev.done {
+  background: color-mix(in srgb, #2e7d32 9%, transparent);
+  border-color: color-mix(in srgb, #2e7d32 30%, transparent);
+}
+.studio-ev.done .studio-ev-icon { color: #2e7d32; }
+
+/* ── Chat row under the transcript ─────────────────────────────────────────── */
+.studio-chat-row { margin-top: 10px; }
+
+.studio-chat-inputwrap {
+  display: flex;
+  gap: 6px;
+}
+
+.studio-chat-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 13px;
+}
+
+.studio-chat-input:focus { outline: none; border-color: var(--accent); }
+
+/* ── Right pane: preview + editor ──────────────────────────────────────────── */
+.studio-pane-right .studio-preview {
+  min-height: 160px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  margin-bottom: 10px;
+  overflow: auto;
+  padding: 10px;
+}
+
+.studio-preview-surface { min-height: 120px; }
+
+.studio-editor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.studio-file-tabs { display: flex; gap: 4px; }
+
+.studio-file-tab {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.studio-file-tab.selected {
+  color: var(--text);
+  border-color: var(--border);
+  background: var(--bg);
+}
+
+.studio-file-save {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.studio-file-save:hover { border-color: var(--accent); }
+
+.studio-editor {
+  flex: 1;
+  min-height: 200px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.studio-editor .cm-editor { height: 100%; }
+.studio-editor .cm-scroller { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+
+/* ── Unsupported (web) notice ──────────────────────────────────────────────── */
+.studio-unsupported {
+  max-width: 520px;
+  margin: 80px auto;
+  text-align: center;
+  color: var(--text);
+  padding: 32px;
+}
+
+.studio-unsupported-icon { font-size: 40px; color: var(--text-muted); margin-bottom: 16px; }
+.studio-unsupported-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+.studio-unsupported-sub { font-size: 14px; color: var(--text-muted); line-height: 1.5; }
+
+/* ── Toasts ────────────────────────────────────────────────────────────────── */
+.studio-toasts {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.studio-toast {
+  pointer-events: auto;
+  background: var(--editor-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, .14);
+  max-width: 360px;
+  animation: studio-toast-in .14s ease-out;
+}
+
+.studio-toast.success { border-left: 3px solid #2e7d32; }
+.studio-toast.error { border-left: 3px solid #d32f2f; }
+.studio-toast.warn { border-left: 3px solid #ed6c02; }
+.studio-toast.info { border-left: 3px solid var(--accent); }
+
+@keyframes studio-toast-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}

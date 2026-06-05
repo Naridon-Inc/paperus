@@ -1,0 +1,22 @@
+{
+  "id": "{{id}}",
+  "name": "{{name}}",
+  "version": "1.0.0",
+  "apiVersion": "{{apiVersion}}",
+  "description": "{{description}}",
+  "author": "{{author}}",
+  "license": "{{license}}",
+  "entry": "index.js",
+  "capabilities": {{capabilitiesJson}},
+  "contributes": {
+    "commands": [
+      { "id": "summarize", "title": "Summarize note", "key": "Mod-Shift-S", "when": "editorFocus" }
+    ],
+    "slash": [
+      { "label": "Summarize note", "icon": "<i class=\"fas fa-wand-magic-sparkles\"></i>", "command": "summarize" }
+    ],
+    "panels": [
+      { "id": "summary", "title": "Summary", "location": "right" }
+    ]
+  }
+}

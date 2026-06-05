@@ -1,0 +1,33 @@
+{
+  "name": "@notionless/create-notionless-plugin",
+  "version": "1.0.0",
+  "description": "Scaffolder for Notionless plugins. `npm create @notionless/plugin` writes a working plugin from a template. Also reusable programmatically by the in-app Plugin Lab (plugin:scaffold).",
+  "license": "MIT",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "create-notionless-plugin": "index.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "default": "./index.js"
+    }
+  },
+  "files": [
+    "index.js",
+    "templates",
+    "README.md"
+  ],
+  "keywords": [
+    "notionless",
+    "plugin",
+    "scaffold",
+    "create",
+    "generator"
+  ],
+  "author": "Naridon Inc.",
+  "engines": {
+    "node": ">=18"
+  }
+}

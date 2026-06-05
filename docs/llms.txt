@@ -1,0 +1,290 @@
+# Notionless Plugin API — llms.txt (apiVersion "1")
+
+> One-shot reference for AI agents (Claude Code, Cursor, etc.) authoring a
+> Notionless plugin. This file is intentionally compact and complete: read it,
+> then emit a `plugin.json` + `index.js` that conforms. The normative source is
+> `docs/PLUGIN_API_CONTRACT.md`; this is the author-facing distillation.
+
+## What a plugin is
+
+A folder with a `plugin.json` manifest and an ESM `index.js` entry. It runs
+**sandboxed** — an `<iframe sandbox="allow-scripts">` hosting a `Worker`. Inside
+the sandbox there is **no** `window`, **no** DOM, **no** `require`/`module`, **no**
+ambient `fetch`/`XMLHttpRequest`/`WebSocket`, **no** Node. The plugin reaches the
+host only through the `ctx` object passed to `activate(ctx)`. Everything crossing
+the boundary is JSON-serializable. Callbacks you pass in (`onToken`, `render`,
+`run`, `onChange`, `authenticate`) are stored locally and invoked later by the host.
+
+## Golden rules
+
+1. **Declare only the capabilities you use.** The host re-checks every privileged
+   call; an undeclared call is denied (`CAPABILITY_DENIED`). `[]` capabilities ⇒ inert.
+2. **No secrets, ever.** You never receive identity private keys, the team root key
+   or any derived swarm/E2EE key, a raw `Y.Doc`/`Y.Text`/`Awareness`, the E2EE
+   transport doc, the AI API key/endpoint, or `safeStorage` blobs. You get plaintext
+   text snapshots, opaque `docId`/`teamId`, streamed AI tokens, and operation results.
+3. **DOM is host-mediated.** `render()` / `body` returns a sanitized **HTML string**
+   OR a **vDOM** node (below). Never return real DOM nodes; you have no DOM.
+4. **Be defensive.** The host wraps every call in try/catch + timeouts. A throw, a
+   hang, or malformed output quarantines your plugin but never breaks the app.
+5. **Every `ctx.*` registration returns `{ dispose() }`.** The host auto-disposes all
+   of them on `deactivate`/disable; you rarely need to clean up manually.
+
+## Entry shape
+
+```js
+import { definePlugin } from '@notionless/plugin-sdk'
+
+export default definePlugin({
+  async activate(ctx) { /* register contributions, set listeners */ },
+  async deactivate() { /* optional */ }
+})
+```
+
+## plugin.json
+
+| Field | Req | Rule |
+|---|---|---|
+| `id` | ✓ | reverse-DNS, lowercase, `^[a-z0-9]+(\.[a-z0-9-]+)+$` (e.g. `com.acme.word-count`) |
+| `name` | ✓ | ≤ 60 chars |
+| `version` | ✓ | semver `x.y.z` |
+| `apiVersion` | ✓ | **must be `"1"`** |
+| `description` | ✓ | ≤ 200 chars |
+| `author` | ✓ | free text / email / url |
+| `license` | ✓ | SPDX id (e.g. `MIT`) |
+| `entry` | ✓ | relative ESM path, default `index.js` (no `..`) |
+| `capabilities` | ✓ | subset of the list below |
+| `contributes` | – | declarative descriptors the host wires *before* `activate` (see below) |
+| `minHostVersion`, `icon` | – | optional |
+
+`contributes` sub-keys (all optional arrays): `commands`, `slash`, `blocks`,
+`panels`, `sections`, `views`, `navItems`, `toolbarItems`, `statusItems`,
+`settings`, `aiProviders`, `loginMethods`, `formats`, `teamHooks`. Declaring them
+makes the UI appear before `activate` resolves; you still register the runtime impl
+in `activate`.
+
+## Capabilities → namespace
+
+| Capability | Grants |
+|---|---|
+| `commands` | `ctx.commands.register/execute/list` |
+| `editor` | `ctx.editor.registerBlock/registerDecoration/onChange/getActive/insert` |
+| `ui` | `ctx.ui.panel/navItem/toolbarItem/statusItem/notify/modal` |
+| `sections` | `ctx.ui.sidebarSection` (also needs `ui`) |
+| `views` | `ctx.ui.view/settingsSection` (also needs `ui`) |
+| `ai` | `ctx.ai.complete/embed/registerProvider` |
+| `auth` | `ctx.auth.registerLoginMethod` |
+| `teams` | `ctx.teams.onTeamOpen/registerTeamAction/list` |
+| `storage` | `ctx.storage.get/set/delete/keys` (namespaced to your id) |
+| `clipboard` | `ctx.ui.clipboardWrite/clipboardRead` (user-gesture bound) |
+| `fs:read` | `ctx.fs.read/list` (workspace root only) |
+| `fs:write` | `ctx.fs.write` (workspace only, never `.notionless/`) |
+| `net:<host>` | `ctx.net.fetch` to exactly `<host>`; `net:*.host` for a wildcard. **Bare `net:*` is rejected.** AI providers that egress also need a matching `net:<host>`. |
+
+## ctx API (all args/returns JSON-serializable)
+
+### commands — `commands`
+```ts
+ctx.commands.register({ id, title, key?, when?: 'editorFocus'|'always', run })  // -> Disposable
+ctx.commands.execute(id, payload?)  // -> Promise<any>  (own/public ids only)
+ctx.commands.list()                 // -> Promise<[{ id, title }]>
+```
+
+### editor — `editor`
+```ts
+ctx.editor.registerBlock({
+  type, fence?, match?,                 // detection: ONE of fence (':::tip') or match{node,test}
+  parseMarkdown(raw) -> model,          // raw block source -> JSON model
+  render(model) -> vdom|html,           // JSON model -> host-mounted UI
+  toMarkdown(model) -> string,          // round-trip back to Markdown
+  interactive?                          // true ⇒ edits dispatch through host
+})  // -> Disposable
+ctx.editor.registerDecoration({ scan(text) -> [{ from, to, class, attrs? }] })  // overlap-safe marks
+ctx.editor.onChange(handler({ docId, text, changedRanges }))  // -> Disposable
+ctx.editor.getActive()  // -> Promise<{ docId, text, selection:{from,to} }|null>
+ctx.editor.insert({ text, at?, replaceSelection? })  // -> Promise<{ ok }> (host clamps range)
+```
+
+### ai — `ai`
+```ts
+ctx.ai.complete({ system?, prompt, onToken?, citations? })  // -> Promise<{ text }>
+ctx.ai.embed(text | string[])                               // -> Promise<number[]|number[][]>
+ctx.ai.registerProvider({ id, label, icon?, retrievalMode?: 'tfidf'|'hybrid',
+  generate(system, prompt, onToken, onComplete, citations), configure?, friendlyError? })
+```
+`complete`/`embed` run host-side against the user's configured backend — you only
+see tokens/vectors, never the key/endpoint. A provider that egresses must declare a
+matching `net:<host>` and fetch via `ctx.net.fetch`.
+
+### auth — `auth`
+```ts
+ctx.auth.registerLoginMethod({ id, label, isAvailable?(teamId), render?(token),
+  authenticate({ teamId, username, profile }) ->
+    | { password }                       // (a) feed the UNCHANGED deriveIdentity
+    | { publicKey, privateKey }          // (b) restore a key at rest
+})
+```
+A login method is an **alternate unlock of the SAME identity key**, never a new
+identity. For case (b) the host rejects unless `publicKey` equals the roster's
+canonical winner. The unlocked secret is transient; never persist it in plugin storage.
+
+### teams — `teams`
+```ts
+ctx.teams.onTeamOpen(handler({ teamId, teamName,
+  members: [{ username, displayName?, publicKey }] }))     // sanitized only
+ctx.teams.registerTeamAction({ id, label, icon?, run(teamId) })
+ctx.teams.list()  // -> Promise<[{ teamId, teamName }]>
+```
+You never receive keys, the root `Y.Doc`, or `Awareness`.
+
+### storage / fs / net
+```ts
+ctx.storage.get(key) | set(key, value) | delete(key) | keys()   // namespaced to your id
+ctx.fs.read(path) | list(dir) | write(path, data)               // workspace-confined; no '..'
+ctx.net.fetch(url, init?) -> Promise<{ status, headers, body }> // declared host only
+```
+
+### ui — `ui` (+ `sections` / `views` / `clipboard` as noted)
+```ts
+ctx.ui.panel({ id, title, location:'right'|'left'|'bottom', render(token)->vdom|html, onEvent? })
+ctx.ui.sidebarSection({ id, title, order, render()->vdom|html, headerAction? })   // needs sections
+ctx.ui.view({ id, title, icon?, render(token)->vdom|html })  // -> { show() } & Disposable; needs views
+ctx.ui.navItem({ id, label, icon, target })                  // target = view id | 'command:<id>'
+ctx.ui.toolbarItem({ id, icon, title, run(sel:{from,to,text}) })
+ctx.ui.statusItem({ id, location?:'footer'|'header' })       // -> { set(text|{html}) } & Disposable
+ctx.ui.settingsSection({ id, title, render(token)->vdom|html })  // needs views
+ctx.ui.notify({ message, kind?:'info'|'success'|'warn'|'error', timeout? })
+ctx.ui.modal({ title, body, buttons? })  // -> Promise<{ button }>
+ctx.ui.clipboardWrite(text) | clipboardRead()                // needs clipboard, user gesture
+```
+
+### events — (no capability)
+```ts
+ctx.events.on('note:open'|'note:save'|'note:change'|'team:updated'|'file:changed', handler)
+```
+| Event | Payload |
+|---|---|
+| `note:open` | `{ docId, path, title }` |
+| `note:save` | `{ docId, path }` |
+| `note:change` | `{ docId, text, changedRanges }` (debounced) |
+| `team:updated` | `{ teamId, members }` |
+| `file:changed` | `{ path, type:'add'|'change'|'unlink' }` |
+
+## vDOM (what render()/body returns)
+
+A sanitized **HTML string**, OR:
+
+```ts
+type VNode = {
+  tag: string,                          // allow-list: div,span,p,h1..h4,ul,ol,li,a,button,
+                                        //   input,textarea,select,option,img,pre,code,table,
+                                        //   thead,tbody,tr,td,th,strong,em,br,hr,label,i,svg(subset)
+  attrs?: Record<string,string>,        // class,id,href,src,type,value,placeholder,title,role,
+                                        //   aria-*,data-* (sanitized)
+  on?: Record<string,string>,           // { click:'<actionId>', input:'<actionId>' } -> onEvent
+  children?: Array<VNode | string>      // strings are escaped textContent
+}
+```
+No `<script>`, no inline event attrs (use the `on` map), no `javascript:`/`data:`
+(except bounded `img` data URLs). Event handlers are declared as action-id strings
+dispatched back via the panel/view `onEvent({ action, payload? })`.
+
+## Error codes (RPC)
+
+`CAPABILITY_DENIED`, `BAD_PARAMS`, `NOT_FOUND`, `TIMEOUT`, `INTERNAL`,
+`UNSUPPORTED_METHOD`, `QUARANTINED`, `HOST_DISPOSED`.
+
+## Complete example — live word count in the footer
+
+**plugin.json**
+```json
+{
+  "id": "com.example.word-count",
+  "name": "Word Count",
+  "version": "1.0.0",
+  "apiVersion": "1",
+  "description": "Live word and character count in the status bar.",
+  "author": "you@example.com",
+  "license": "MIT",
+  "entry": "index.js",
+  "capabilities": ["editor", "ui"],
+  "contributes": { "statusItems": [{ "id": "wc", "location": "footer" }] }
+}
+```
+
+**index.js**
+```js
+import { definePlugin } from '@notionless/plugin-sdk'
+
+export default definePlugin({
+  async activate(ctx) {
+    const item = ctx.ui.statusItem({ id: 'wc', location: 'footer' })
+    const update = (text) => {
+      const words = (text.trim().match(/\S+/g) || []).length
+      item.set(`${words} words · ${text.length} chars`)
+    }
+    const active = await ctx.editor.getActive()
+    update(active ? active.text : '')
+    ctx.editor.onChange((e) => update(e.text))
+  }
+})
+```
+
+## Second example — an AI "Summarize note" command
+
+**plugin.json** (note the extra capabilities)
+```json
+{
+  "id": "com.example.summarize",
+  "name": "Summarize",
+  "version": "1.0.0",
+  "apiVersion": "1",
+  "description": "Summarize the active note with the configured AI backend.",
+  "author": "you@example.com",
+  "license": "MIT",
+  "entry": "index.js",
+  "capabilities": ["commands", "editor", "ai", "ui"],
+  "contributes": {
+    "commands": [{ "id": "summarize.run", "title": "Summarize note", "key": "Mod-Shift-S" }]
+  }
+}
+```
+
+**index.js**
+```js
+import { definePlugin } from '@notionless/plugin-sdk'
+
+export default definePlugin({
+  async activate(ctx) {
+    ctx.commands.register({
+      id: 'summarize.run',
+      title: 'Summarize note',
+      key: 'Mod-Shift-S',
+      async run() {
+        const active = await ctx.editor.getActive()
+        if (!active || !active.text.trim()) {
+          ctx.ui.notify({ message: 'Open a note first.', kind: 'warn' })
+          return
+        }
+        let out = ''
+        await ctx.ai.complete({
+          system: 'Summarize the note in 3 concise bullet points.',
+          prompt: active.text,
+          onToken: (t) => { out += t }
+        })
+        await ctx.editor.insert({ text: `\n\n## Summary\n${out}\n` })
+      }
+    })
+  }
+})
+```
+
+## SDK & scaffolding
+
+- `import { definePlugin } from '@notionless/plugin-sdk'` — typed entry helper.
+- Scaffold: `npm create @notionless/plugin` (id/name/template), or use the in-app
+  **Plugin Lab** ("Build with Claude") which generates + hot-loads a plugin for you.
+- Examples live in `examples/plugins/*` (word-count, custom-callout, ai-summarize,
+  magic-login, custom-section).
+
+— Conform to this and your plugin loads first try. —

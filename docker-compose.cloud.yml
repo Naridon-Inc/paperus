@@ -1,0 +1,25 @@
+# Notionless "always-on sync box" — your own private cloud, in one command.
+#
+#   docker compose -f docker-compose.cloud.yml up -d
+#
+# This runs the same tiny relay, but with persistence turned on: it keeps every
+# note's ENCRYPTED state in the `notionless-data` volume, so your team's notes
+# are available 24/7 even when everyone's laptop is closed. No database, no
+# accounts, no login. The box only ever stores scrambled ciphertext — it can
+# never read your notes. See docs/SELF_HOSTED_SYNC.md for the 3-step setup.
+
+services:
+  sync:
+    build: ./backend
+    ports:
+      - "9008:9008"            # change the left number if 9008 is taken
+    environment:
+      - PORT=9008
+      - NODE_ENV=production
+      - YJS_PERSIST_DIR=/data  # turns on persistence (this is the whole "cloud")
+    volumes:
+      - notionless-data:/data  # your encrypted notes live here, on your disk
+    restart: unless-stopped
+
+volumes:
+  notionless-data:

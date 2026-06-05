@@ -1,0 +1,620 @@
+/* ============================================================================
+   mobile.css — Mobile companion (leaf-peer) responsive styles
+   ----------------------------------------------------------------------------
+   Imported by src/renderer/mobile/mobile-main.js. The companion boots the SAME
+   vanilla-JS renderer as desktop/web (src/renderer/src/) but is tagged with
+   `document.body.classList.add('is-mobile')` (see MOBILE_COMPANION.md §4.3).
+   Everything here is scoped under `body.is-mobile` so it NEVER affects the
+   desktop app or the existing dev-only web build (invariant R7: additive only).
+
+   What this stylesheet provides:
+     • Large touch targets (>=48px) for all interactive chrome.
+     • Single-column, full-bleed responsive layout (no multi-pane).
+     • Hides/adapts desktop-only chrome: the traffic-light spacer, the
+       drag-region titlebars, and the side-by-side sidebar + main panes.
+     • Safe-area insets (the mobile shell sets viewport-fit=cover, §4.2) so the
+       UI clears the notch / home indicator / rounded corners.
+     • The pairing "Link screen" (.mobile-link-*) shown by the hard pairing
+       gate before any note UI (§2.5).
+     • A "companion / leaf" status indicator (.mobile-leaf-*) surfacing the
+       foreground-only sync discipline (§1, §3.3).
+
+   Theming: mirrors the canonical variables from src/renderer/src/style.css —
+   var(--bg), var(--text), var(--accent), var(--border) — with the same
+   light-mode fallbacks, so the companion themes consistently with desktop.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   0. Mobile token layer
+   Re-expose the canonical variables (so this file is self-consistent even if
+   loaded before style.css resolves) plus a few mobile-only conveniences
+   derived from them. Fallbacks match style.css :root exactly.
+   -------------------------------------------------------------------------- */
+body.is-mobile {
+  /* canonical, mirrored from src/renderer/src/style.css */
+  --bg: var(--bg, #f5f5f5);
+  --text: var(--text, #333);
+  --accent: var(--accent, #007bff);
+  --border: var(--border, #eaeaea);
+
+  /* mobile-only conveniences */
+  --m-touch: 48px;                 /* minimum touch target (Apple/Material) */
+  --m-touch-lg: 56px;              /* primary action height */
+  --m-radius: 12px;
+  --m-gap: 12px;
+  --m-pad: 16px;
+
+  /* safe-area insets (mobile.html ships viewport-fit=cover) */
+  --m-safe-top: env(safe-area-inset-top, 0px);
+  --m-safe-right: env(safe-area-inset-right, 0px);
+  --m-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --m-safe-left: env(safe-area-inset-left, 0px);
+
+  /* Prevent iOS auto text-zoom and rubber-band scroll jitters */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+/* Kill the desktop tap-highlight flash everywhere on mobile. */
+body.is-mobile * {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Nothing is a window drag-region on a touch device — neutralize the Electron
+   titlebar drag affordance so taps register as taps, not drags. */
+body.is-mobile [class*="-webkit-app-region"],
+body.is-mobile .tabs-header,
+body.is-mobile .sidebar-header-area,
+body.is-mobile .tab-list,
+body.is-mobile .app-header {
+  -webkit-app-region: no-drag;
+}
+
+/* ==========================================================================
+   1. Hide / adapt desktop-only chrome
+   ========================================================================== */
+
+/* Traffic-light spacer (macOS window buttons) — meaningless on mobile. */
+body.is-mobile .traffic-lights,
+body.is-mobile .traffic-lights-spacer,
+body.is-mobile .traffic-lights-spacer.collapsed-only {
+  display: none !important;
+  width: 0 !important;
+}
+
+/* The sidebar header reserves 70px on the left for the macOS traffic lights;
+   reclaim it on mobile and let the OS safe-area inset take over instead. */
+body.is-mobile .sidebar-header-area {
+  padding-left: max(var(--m-pad), var(--m-safe-left)) !important;
+  padding-right: max(var(--m-pad), var(--m-safe-right));
+  height: var(--m-touch);
+}
+
+/* The collapsed-sidebar "expand" affordance and its spacer are a desktop
+   multi-pane concept — the mobile sidebar is a full-screen drawer instead. */
+body.is-mobile .sidebar-toggle-outer,
+body.is-mobile aside.collapsed + .main .sidebar-toggle-outer.collapsed-only {
+  display: none !important;
+}
+
+/* The macOS window-control button (close/restore) in the editor pane. */
+body.is-mobile .window-control-btn {
+  display: none !important;
+}
+
+/* Multi-tab strip is desktop-oriented; collapse it to free vertical space.
+   (The companion is single-document focused; tab switching happens via the
+   sidebar drawer.) */
+body.is-mobile .tabs-header {
+  display: none !important;
+}
+
+/* The reading-column table-of-contents rail floats over content and is awkward
+   on a phone — hide it. */
+body.is-mobile .toc-container {
+  display: none !important;
+}
+
+/* ==========================================================================
+   2. Single-column responsive layout (no multi-pane)
+   ========================================================================== */
+
+/* App fills the visual viewport, padded by safe-area insets. Use 100dvh so the
+   layout tracks the dynamic mobile browser chrome (URL bar show/hide). */
+body.is-mobile,
+body.is-mobile html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body.is-mobile #app {
+  height: 100dvh;
+  width: 100vw;
+}
+
+/* The desktop wrapper lays sidebar + main side-by-side (flex-direction: row).
+   On mobile they become a single stacked column; the sidebar is an overlay
+   drawer, not a permanent pane. */
+body.is-mobile .wrapper {
+  flex-direction: column;
+}
+
+/* Main pane is the only always-visible surface and takes the full width. */
+body.is-mobile .main {
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  flex: 1;
+}
+
+/* The editor scroll region: account for the app header and the safe-area
+   bottom inset (home indicator). Replaces the desktop fixed-height calc. */
+body.is-mobile .editor-container {
+  height: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Comfortable single-column reading: shrink the generous desktop side padding
+   (60px) down to phone-friendly gutters, and respect side safe-areas. */
+body.is-mobile #editor .cm-content {
+  max-width: 100%;
+  padding-left: max(20px, var(--m-safe-left));
+  padding-right: max(20px, var(--m-safe-right));
+  padding-bottom: calc(80px + var(--m-safe-bottom));
+  font-size: 17px;          /* slightly larger body text for small screens */
+  line-height: 1.7;
+}
+
+body.is-mobile .document-title-wrapper {
+  padding-left: max(20px, var(--m-safe-left));
+  padding-right: max(20px, var(--m-safe-right));
+  padding-top: 24px;
+  max-width: 100%;
+}
+
+body.is-mobile #page-title {
+  font-size: 26px;
+}
+
+/* App header: full-width bar, no drag-region, clears the top notch. */
+body.is-mobile .app-header {
+  height: auto;
+  min-height: var(--m-touch);
+  padding-top: var(--m-safe-top);
+  padding-left: max(var(--m-pad), var(--m-safe-left));
+  padding-right: max(var(--m-pad), var(--m-safe-right));
+}
+
+/* Footer status bar clears the home indicator. */
+body.is-mobile footer {
+  height: auto;
+  min-height: 28px;
+  padding-bottom: var(--m-safe-bottom);
+  padding-left: max(var(--m-pad), var(--m-safe-left));
+  padding-right: max(var(--m-pad), var(--m-safe-right));
+  font-size: 11px;
+}
+
+/* ----- Sidebar as a slide-in overlay drawer ----- */
+
+body.is-mobile aside {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(86vw, 360px);
+  max-width: 86vw;
+  height: 100dvh;
+  z-index: 6000;                              /* above editor, below modals */
+  box-shadow: 2px 0 24px rgba(0, 0, 0, 0.22);
+  background: var(--sidebar-bg, var(--bg));
+  border-right: 1px solid var(--border);
+  /* Hidden off-canvas by default; revealed by removing `.collapsed`. */
+  transform: translateX(-100%);
+  transition: transform 0.24s ease;
+  padding-top: var(--m-safe-top);
+  padding-bottom: var(--m-safe-bottom);
+}
+
+/* Desktop collapses the sidebar to width:0 + opacity:0; on mobile a non-
+   collapsed sidebar means "drawer open" — slide it in and keep it readable. */
+body.is-mobile aside:not(.collapsed) {
+  transform: translateX(0);
+  opacity: 1;
+  width: min(86vw, 360px);
+  min-width: 0;
+}
+
+body.is-mobile aside.collapsed {
+  transform: translateX(-100%);
+  /* keep it laid out so the slide animation is smooth */
+  width: min(86vw, 360px);
+  min-width: 0;
+  opacity: 1;
+  overflow: visible;
+}
+
+/* Scrim behind the open drawer. The renderer toggles `.collapsed`; the scrim
+   is purely presentational and only shows while the drawer is open. */
+body.is-mobile aside:not(.collapsed)::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  left: min(86vw, 360px);
+  background: rgba(0, 0, 0, 0.4);
+  z-index: -1;
+}
+
+/* ==========================================================================
+   3. Large touch targets (>=48px)
+   ========================================================================== */
+
+/* Generic interactive chrome bumps to the 48px touch floor. */
+body.is-mobile .sidebar-toggle,
+body.is-mobile .sidebar-toggle-inner,
+body.is-mobile .icon-btn,
+body.is-mobile .sidebar-footer .icon-btn,
+body.is-mobile .btn-text,
+body.is-mobile .new-tab-btn {
+  min-width: var(--m-touch);
+  min-height: var(--m-touch);
+  width: auto;
+  height: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* File-tree / roster rows: roomy, finger-friendly hit areas. */
+body.is-mobile .tree-item,
+body.is-mobile .cmd-item,
+body.is-mobile .new-tab-item,
+body.is-mobile .context-menu-item,
+body.is-mobile .slash-item,
+body.is-mobile .search-result-item {
+  min-height: var(--m-touch);
+  padding-top: 10px;
+  padding-bottom: 10px;
+  font-size: 15px;
+}
+
+body.is-mobile .tree-item {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+/* Tree icons scale up to match the larger rows. */
+body.is-mobile .tree-icon {
+  width: 22px;
+  font-size: 14px;
+}
+
+/* Footer toolbar spreads its icons across the full width with big targets. */
+body.is-mobile .sidebar-footer {
+  padding: 8px max(12px, var(--m-safe-left)) calc(8px + var(--m-safe-bottom)) max(12px, var(--m-safe-right));
+}
+
+body.is-mobile .sidebar-footer .icon-btn {
+  width: var(--m-touch);
+  height: var(--m-touch);
+  font-size: 17px;
+}
+
+/* Form inputs: 16px font min to stop iOS from auto-zooming on focus. */
+body.is-mobile input,
+body.is-mobile textarea,
+body.is-mobile select {
+  font-size: 16px;
+}
+
+/* Modals/dialogs go full-bleed-ish so dialog content isn't cramped. */
+body.is-mobile .new-tab-modal,
+body.is-mobile .cmd-palette-modal,
+body.is-mobile .td-box {
+  width: calc(100vw - 2 * var(--m-pad)) !important;
+  max-width: 480px;
+}
+
+body.is-mobile .cmd-palette-overlay,
+body.is-mobile .new-tab-modal-overlay {
+  padding-top: calc(40px + var(--m-safe-top));
+  align-items: flex-start;
+}
+
+/* ==========================================================================
+   4. The pairing "Link screen"  (.mobile-link-*)
+   Shown by checkPairingCredentials() -> showLinkingScreen() before ANY note
+   UI when pairing creds are absent / malformed / expired (§2.5). It is a hard
+   gate: full-screen, self-contained, themed with the canonical variables.
+   ========================================================================== */
+
+.mobile-link-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;                 /* above the drawer + editor, like a modal */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--m-gap);
+  background: var(--bg, #f5f5f5);
+  color: var(--text, #333);
+  /* clear notch + home indicator */
+  padding: calc(24px + var(--m-safe-top))
+           max(24px, var(--m-safe-right))
+           calc(24px + var(--m-safe-bottom))
+           max(24px, var(--m-safe-left));
+  text-align: center;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Centered, width-capped column so it reads well on tablets too. */
+.mobile-link-card {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-gap);
+  align-items: stretch;
+}
+
+.mobile-link-logo {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 4px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  color: #fff;
+  background: var(--accent, #007bff);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.mobile-link-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text, #333);
+}
+
+.mobile-link-subtitle {
+  font-size: 15px;
+  line-height: 1.5;
+  margin: 0;
+  color: var(--text, #333);
+  opacity: 0.7;
+}
+
+/* Paste-link input — big, tappable, themed. */
+.mobile-link-input {
+  width: 100%;
+  min-height: var(--m-touch);
+  padding: 12px 14px;
+  font-size: 16px;
+  border: 1px solid var(--border, #eaeaea);
+  border-radius: var(--m-radius);
+  background: var(--editor-bg, #fff);
+  color: var(--text, #333);
+  outline: none;
+  resize: vertical;
+  line-height: 1.4;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  word-break: break-all;
+}
+
+.mobile-link-input::placeholder {
+  color: var(--text, #333);
+  opacity: 0.4;
+}
+
+.mobile-link-input:focus {
+  border-color: var(--accent, #007bff);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, #007bff) 22%, transparent);
+}
+
+/* Action buttons. Primary = filled accent; secondary = outline. */
+.mobile-link-btn {
+  width: 100%;
+  min-height: var(--m-touch-lg);
+  padding: 0 18px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: var(--m-radius);
+  border: 1px solid transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: filter 0.15s, background 0.15s, opacity 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-link-btn-primary {
+  background: var(--accent, #007bff);
+  color: #fff;
+}
+
+.mobile-link-btn-primary:active {
+  filter: brightness(0.92);
+}
+
+.mobile-link-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.mobile-link-btn-secondary {
+  background: var(--editor-bg, #fff);
+  color: var(--text, #333);
+  border-color: var(--border, #eaeaea);
+}
+
+.mobile-link-btn-secondary:active {
+  background: var(--bg, #f5f5f5);
+}
+
+/* QR is deferred (§2.2 / Phase 1): keep the affordance hidden by default so
+   markup can ship the button without showing it. */
+.mobile-link-btn-qr {
+  display: none;
+}
+
+/* Inline error / status line (e.g. "Pairing link expired", "Invalid link"). */
+.mobile-link-error {
+  font-size: 14px;
+  line-height: 1.4;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: #b42318;
+  background: color-mix(in srgb, #b42318 10%, var(--editor-bg, #fff));
+  border: 1px solid color-mix(in srgb, #b42318 30%, transparent);
+}
+
+.mobile-link-error[hidden] {
+  display: none;
+}
+
+/* Honest-tradeoffs footnote (the §2.6 security copy: "linking a phone is as
+   trust-significant as inviting a person"). Subdued, smaller. */
+.mobile-link-note {
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 8px 0 0;
+  color: var(--text, #333);
+  opacity: 0.55;
+}
+
+.mobile-link-note a {
+  color: var(--accent, #007bff);
+}
+
+/* Argon2id derivation spinner state (the claim/login step runs slow on phone,
+   §2.4). Reuse on the link screen and the claim prompt. */
+.mobile-link-spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid color-mix(in srgb, var(--accent, #007bff) 25%, transparent);
+  border-top-color: var(--accent, #007bff);
+  animation: mobile-spin 0.8s linear infinite;
+  margin: 4px auto;
+}
+
+@keyframes mobile-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   5. "Companion / leaf" status indicator  (.mobile-leaf-*)
+   Surfaces the leaf discipline (foreground-only sync, never a relied-upon
+   replica — §1, §3.3). A small pill the renderer can drop into the header or
+   footer, toggling state classes as the engine connects/disconnects.
+   ========================================================================== */
+
+.mobile-leaf-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  user-select: none;
+  color: var(--text, #333);
+  background: color-mix(in srgb, var(--text, #333) 7%, transparent);
+  border: 1px solid var(--border, #eaeaea);
+}
+
+/* The status dot. Default = neutral/idle. */
+.mobile-leaf-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--text-muted, #888);
+}
+
+.mobile-leaf-label {
+  font-size: 12px;
+}
+
+/* Connected (foreground, peers reachable) → accent-tinted, live dot. */
+.mobile-leaf-badge.is-connected {
+  color: var(--accent, #007bff);
+  background: color-mix(in srgb, var(--accent, #007bff) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent, #007bff) 35%, transparent);
+}
+
+.mobile-leaf-badge.is-connected .mobile-leaf-dot {
+  background: var(--accent, #007bff);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent, #007bff) 60%, transparent);
+  animation: mobile-leaf-pulse 1.8s ease-out infinite;
+}
+
+@keyframes mobile-leaf-pulse {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent, #007bff) 55%, transparent); }
+  70%  { box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent, #007bff) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent, #007bff) 0%, transparent); }
+}
+
+/* Syncing / connecting → amber, gently pulsing. */
+.mobile-leaf-badge.is-syncing .mobile-leaf-dot {
+  background: #f59e0b;
+  animation: mobile-leaf-blink 1s ease-in-out infinite;
+}
+
+@keyframes mobile-leaf-blink {
+  50% { opacity: 0.35; }
+}
+
+/* Backgrounded / disconnected → muted; the leaf tears the mesh down off-screen
+   (§3.3). This is the *honest* resting state, not an error. */
+.mobile-leaf-badge.is-paused,
+.mobile-leaf-badge.is-offline {
+  color: var(--text-muted, #888);
+  background: color-mix(in srgb, var(--text-muted, #888) 10%, transparent);
+}
+
+.mobile-leaf-badge.is-paused .mobile-leaf-dot,
+.mobile-leaf-badge.is-offline .mobile-leaf-dot {
+  background: var(--text-muted, #888);
+  animation: none;
+}
+
+/* Optional explanatory tooltip text the renderer may render alongside, e.g.
+   "Companion device · syncs only while open". */
+.mobile-leaf-hint {
+  font-size: 11px;
+  color: var(--text-muted, #888);
+  margin-left: 6px;
+}
+
+/* ==========================================================================
+   6. Width-based fallback
+   The shared renderer always sets `body.is-mobile` on the companion build, so
+   the rules above are the source of truth. This narrow-viewport guard is a
+   belt-and-braces fallback (e.g. the dev-only web build opened on a phone)
+   covering the most layout-critical adaptations only.
+   ========================================================================== */
+@media (max-width: 600px) {
+  body:not(.is-mobile) .traffic-lights-spacer { display: none; }
+  body:not(.is-mobile) .wrapper { flex-direction: column; }
+  body:not(.is-mobile) #editor .cm-content {
+    max-width: 100%;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+}

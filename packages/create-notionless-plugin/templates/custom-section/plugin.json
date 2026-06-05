@@ -1,0 +1,22 @@
+{
+  "id": "{{id}}",
+  "name": "{{name}}",
+  "version": "1.0.0",
+  "apiVersion": "{{apiVersion}}",
+  "description": "{{description}}",
+  "author": "{{author}}",
+  "license": "{{license}}",
+  "entry": "index.js",
+  "capabilities": {{capabilitiesJson}},
+  "contributes": {
+    "sections": [
+      { "id": "bookmarks", "title": "Bookmarks", "order": 3 }
+    ],
+    "views": [
+      { "id": "bookmarks", "title": "Bookmarks", "icon": "<i class=\"far fa-bookmark\"></i>" }
+    ],
+    "navItems": [
+      { "id": "bookmarks-nav", "label": "Bookmarks", "icon": "<i class=\"far fa-bookmark\"></i>", "target": "bookmarks" }
+    ]
+  }
+}

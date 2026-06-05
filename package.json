@@ -1,0 +1,186 @@
+{
+  "name": "Notionless",
+  "productName": "Notionless",
+  "version": "1.0.8",
+  "description": "Open-source, local-first, zero-account, pure-P2P Notion alternative. End-to-end encrypted Markdown notes that sync peer-to-peer with no cloud lock-in.",
+  "license": "AGPL-3.0-only",
+  "author": "Naridon Inc.",
+  "homepage": "https://github.com/Naridon-Inc/Notionless",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Naridon-Inc/Notionless.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Naridon-Inc/Notionless/issues"
+  },
+  "main": "./out/main/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "start": "electron-vite dev",
+    "dev:m": "concurrently \"pnpm run dev\" \"cd backend && pnpm run dev\"",
+    "signaling": "HOST=localhost PORT=4444 node ./node_modules/y-webrtc/bin/server.js",
+    "dist": "npm run build && electron-builder",
+    "pack": "npm run build && electron-builder --dir",
+    "build:web": "vite build --config vite.web.config.mjs",
+    "dev:mobile": "vite --config vite.mobile.config.mjs --host",
+    "build:mobile": "vite build --config vite.mobile.config.mjs",
+    "preview:mobile": "vite preview --config vite.mobile.config.mjs",
+    "test": "npm run test:crypto && npm run test:devlink && npm run test:brain && npm run test:relay && npm run test:sync",
+    "test:crypto": "node --import ./tests/ext-loader.mjs tests/e2ee-crypto.test.mjs",
+    "test:devlink": "node --import ./tests/ext-loader.mjs tests/device-link.test.mjs",
+    "test:brain": "node --import ./tests/ext-loader.mjs tests/brain-tools.test.mjs",
+    "test:relay": "NODE_PATH=\"$PWD/node_modules\" node tests/relay-persist.test.cjs",
+    "test:sync": "npm run build:web && NODE_PATH=\"$PWD/node_modules\" node tests/crdt-sync.test.cjs",
+    "build:site": "mkdir -p backend/public && cp landing/index.html landing/*.png landing/*.webp landing/*.svg backend/public/",
+    "deploy:lightsail": "aws lightsail create-container-service-deployment --service-name ${LIGHTSAIL_SERVICE:-notionless} --cli-input-json file://lightsail-deployment.json"
+  },
+  "build": {
+    "appId": "com.notionless.app",
+    "productName": "Notionless",
+    "files": [
+      "**/*",
+      "!apps/**",
+      "!dist-mobile/**",
+      "!landing/**",
+      "!backend/**",
+      "!docs/**",
+      "!examples/**",
+      "!tests/**",
+      "!packages/**",
+      "!**/*.md"
+    ],
+    "publish": [
+      {
+        "provider": "s3",
+        "bucket": "notionless-updates",
+        "region": "eu-central-1"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "resources/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Notionless",
+      "artifactName": "${productName}-${version}-Setup.${ext}"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "icon": "resources/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "resources/entitlements.mac.plist",
+      "entitlementsInherit": "resources/entitlements.mac.plist",
+      "notarize": true
+    },
+    "dmg": {
+      "artifactName": "${productName}-${version}-universal.${ext}",
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ]
+    },
+    "directories": {
+      "output": "dist"
+    }
+  },
+  "dependencies": {
+    "@codemirror/autocomplete": "^6.20.1",
+    "@codemirror/commands": "^6.10.2",
+    "@codemirror/lang-javascript": "^6.2.5",
+    "@codemirror/lang-json": "^6.0.2",
+    "@codemirror/lang-markdown": "^6.5.0",
+    "@codemirror/language": "^6.12.2",
+    "@codemirror/language-data": "^6.5.2",
+    "@codemirror/lint": "^6.9.5",
+    "@codemirror/search": "^6.6.0",
+    "@codemirror/state": "^6.5.4",
+    "@codemirror/view": "^6.39.16",
+    "@electron-toolkit/preload": "^3.0.2",
+    "@electron-toolkit/utils": "^4.0.0",
+    "@isomorphic-git/lightning-fs": "^4.6.2",
+    "@lezer/highlight": "^1.2.3",
+    "@sentry/electron": "^7.7.1",
+    "@simplewebauthn/browser": "^13.2.2",
+    "chokidar": "^4.0.0",
+    "crypto-js": "^4.2.0",
+    "diff": "^8.0.3",
+    "electron-settings": "^4.0.4",
+    "electron-updater": "^6.7.3",
+    "fs-extra": "^11.3.0",
+    "html2canvas": "^1.4.1",
+    "isomorphic-git": "^1.38.3",
+    "jsonwebtoken": "^9.0.3",
+    "jspdf": "^4.1.0",
+    "katex": "^0.17.0",
+    "lib0": "^0.2.117",
+    "libsodium-wrappers": "^0.8.2",
+    "libsodium-wrappers-sumo": "^0.8.2",
+    "marked": "^18.0.4",
+    "mermaid": "^11.15.0",
+    "node-fetch": "^2.7.0",
+    "qrcode": "^1.5.4",
+    "quill": "^2.0.3",
+    "quill-delta": "^5.1.0",
+    "showdown": "^2.1.0",
+    "simple-peer": "^9.11.1",
+    "turndown": "^7.2.2",
+    "turndown-plugin-gfm": "^1.0.2",
+    "uuid": "^13.0.0",
+    "ws": "^8.19.0",
+    "y-codemirror.next": "^0.3.5",
+    "y-indexeddb": "^9.0.12",
+    "y-protocols": "^1.0.7",
+    "y-quill": "^1.0.0",
+    "y-webrtc": "^10.3.0",
+    "y-websocket": "^3.0.0",
+    "yjs": "^13.6.29"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "electron": "^34.0.0",
+    "electron-builder": "^26.7.0",
+    "electron-vite": "^2.3.0",
+    "playwright": "^1.60.0",
+    "vite": "^6.0.0",
+    "vite-plugin-node-polyfills": "^0.25.0"
+  },
+  "packageManager": "pnpm@10.27.0"
+}

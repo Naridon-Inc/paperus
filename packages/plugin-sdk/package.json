@@ -1,0 +1,33 @@
+{
+  "name": "@notionless/plugin-sdk",
+  "version": "1.0.0",
+  "description": "Authoring SDK for Notionless plugins. Provides definePlugin() and the full TypeScript surface for the FROZEN Plugin API v1 (apiVersion \"1\").",
+  "license": "MIT",
+  "type": "module",
+  "main": "index.js",
+  "module": "index.js",
+  "types": "types.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
+    }
+  },
+  "files": [
+    "index.js",
+    "types.d.ts",
+    "README.md"
+  ],
+  "keywords": [
+    "notionless",
+    "plugin",
+    "sdk",
+    "markdown",
+    "codemirror"
+  ],
+  "author": "Naridon Inc.",
+  "engines": {
+    "node": ">=18"
+  }
+}

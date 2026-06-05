@@ -1,0 +1,98 @@
+:root {
+  --bg: #fff;
+  --text: #333;
+  --sidebar-bg: #fff;
+  --border: #eaeaea;
+  --text-muted: #888;
+  --accent: #007bff;
+  --selection: #e3f2fd;
+  --hover-bg: #f5f5f5;
+  --active-bg: #e6f7ff;
+  --input-bg: #fff;
+  --modal-bg: #fff;
+  --card-bg: #fff;
+  --shadow: rgba(0,0,0,0.1);
+}
+
+[data-theme="dark"] {
+  --bg: #1e1e1e;
+  --text: #e0e0e0;
+  --sidebar-bg: #252526;
+  --border: #333;
+  --text-muted: #888;
+  --accent: #4daafc;
+  --selection: #264f78;
+  --hover-bg: #2a2d2e;
+  --active-bg: #37373d;
+  --input-bg: #252526;
+  --modal-bg: #252526;
+  --card-bg: #252526;
+  --shadow: rgba(0,0,0,0.5);
+}
+
+/* Dark Mode Specific Overrides */
+[data-theme="dark"] .sidebar {
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+}
+
+[data-theme="dark"] .tab-active {
+  background: var(--bg);
+  color: var(--text);
+}
+
+[data-theme="dark"] .tab {
+  background: var(--sidebar-bg);
+  color: var(--text-muted);
+  border-right: 1px solid var(--border);
+}
+
+[data-theme="dark"] .ql-editor {
+  color: var(--text);
+}
+
+[data-theme="dark"] .ql-toolbar {
+  background: var(--sidebar-bg);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .ql-stroke {
+  stroke: var(--text);
+}
+
+[data-theme="dark"] .ql-fill {
+  fill: var(--text);
+}
+
+[data-theme="dark"] .settings-modal {
+    background: var(--modal-bg);
+    color: var(--text);
+}
+
+[data-theme="dark"] .settings-sidebar {
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+}
+
+[data-theme="dark"] .settings-sidebar-item:hover {
+    background: var(--hover-bg);
+}
+
+[data-theme="dark"] .settings-sidebar-item.active {
+    background: var(--active-bg);
+    color: var(--accent);
+}
+
+[data-theme="dark"] select, [data-theme="dark"] input {
+    background: var(--input-bg);
+    color: var(--text);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .folder-header:hover, [data-theme="dark"] .file-item:hover {
+    background: var(--hover-bg);
+}
+
+[data-theme="dark"] .folder-header.active, [data-theme="dark"] .file-item.active {
+    background: var(--active-bg);
+}

@@ -1,0 +1,33 @@
+{
+  "_comment_icons": "icon-192.png / icon-512.png are generated from build/icon.png (1024x1024) via `sips -z 192 192 build/icon.png --out public/icon-192.png` (and -z 512 512). Regenerate if the app art changes. The 512 doubles as the maskable icon; the source art carries its own padding so it is safe in a maskable safe-zone.",
+  "name": "Notionless Companion",
+  "short_name": "Notionless",
+  "description": "Mobile companion for Notionless — a local-first, zero-account, peer-to-peer Notion alternative. Pair it to a team from your desktop and edit notes on the go.",
+  "id": "/",
+  "start_url": "./mobile.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

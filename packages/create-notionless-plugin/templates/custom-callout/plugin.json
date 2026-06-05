@@ -1,0 +1,19 @@
+{
+  "id": "{{id}}",
+  "name": "{{name}}",
+  "version": "1.0.0",
+  "apiVersion": "{{apiVersion}}",
+  "description": "{{description}}",
+  "author": "{{author}}",
+  "license": "{{license}}",
+  "entry": "index.js",
+  "capabilities": {{capabilitiesJson}},
+  "contributes": {
+    "blocks": [
+      { "type": "callout", "fence": ":::" }
+    ],
+    "slash": [
+      { "label": "Tip callout", "icon": "<i class=\"far fa-lightbulb\"></i>", "md": ":::tip\n", "mdAfter": "\n:::" }
+    ]
+  }
+}

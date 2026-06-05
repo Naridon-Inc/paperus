@@ -1,0 +1,22 @@
+{
+  "id": "com.notionless.custom-section",
+  "name": "Bookmarks",
+  "version": "1.0.0",
+  "apiVersion": "1",
+  "description": "Adds a Bookmarks sidebar section, a nav item, and a full Bookmarks view via ctx.ui sections/views.",
+  "author": "Naridon Inc. <plugins@notionless.example>",
+  "license": "MIT",
+  "entry": "index.js",
+  "capabilities": ["ui", "sections", "views"],
+  "contributes": {
+    "sections": [
+      { "id": "bookmarks", "title": "Bookmarks", "order": 3 }
+    ],
+    "views": [
+      { "id": "bookmarks", "title": "Bookmarks", "icon": "<i class=\"far fa-bookmark\"></i>" }
+    ],
+    "navItems": [
+      { "id": "bookmarks-nav", "label": "Bookmarks", "icon": "<i class=\"far fa-bookmark\"></i>", "target": "bookmarks" }
+    ]
+  }
+}

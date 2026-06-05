@@ -1,0 +1,19 @@
+{
+  "id": "com.notionless.custom-callout",
+  "name": "Custom Callout",
+  "version": "1.0.0",
+  "apiVersion": "1",
+  "description": "A :::tip / :::warn / :::note callout block that renders as a styled card and round-trips to Markdown.",
+  "author": "Naridon Inc. <plugins@notionless.example>",
+  "license": "MIT",
+  "entry": "index.js",
+  "capabilities": ["editor"],
+  "contributes": {
+    "blocks": [
+      { "type": "callout", "fence": ":::" }
+    ],
+    "slash": [
+      { "label": "Tip callout", "icon": "<i class=\"far fa-lightbulb\"></i>", "md": ":::tip\n", "mdAfter": "\n:::" }
+    ]
+  }
+}

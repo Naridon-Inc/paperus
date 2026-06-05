@@ -1,0 +1,17 @@
+{
+  "id": "notionless.reference-connector",
+  "name": "Reference Support Connector",
+  "version": "1.0.0",
+  "apiVersion": "1",
+  "description": "Reference external-integration connector: registers Company Brain tools (search_tickets / get_ticket) that fetch structured 'ticket' data from a public read-only API (jsonplaceholder.typicode.com), demonstrating the tools + net:<host> + storage pattern end-to-end.",
+  "author": "Naridon Inc. <plugins@notionless.example>",
+  "license": "MIT",
+  "entry": "index.js",
+  "capabilities": ["tools", "net:jsonplaceholder.typicode.com", "storage"],
+  "contributes": {
+    "tools": [
+      { "id": "search_tickets", "description": "Search support tickets by keyword and return matching tickets (id, title, body)." },
+      { "id": "get_ticket", "description": "Fetch one support ticket by numeric id and return its full record." }
+    ]
+  }
+}

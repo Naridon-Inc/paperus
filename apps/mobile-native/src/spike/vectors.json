@@ -1,0 +1,38 @@
+{
+  "_note": "Golden interop vectors. An RN/native client MUST reproduce these byte-for-byte from the same inputs, or it cannot derive identities / join swarms the desktop accepts.",
+  "inputs": {
+    "teamRootKey": "AAAAAAAAAAAAAAAAAAAAAAAA",
+    "noteId": "note-0001",
+    "username": "alice",
+    "password": "correct horse battery staple",
+    "sigMessage": "notionless-interop-vector-v1"
+  },
+  "base64_variant_probe": {
+    "input_bytes": [
+      255,
+      254,
+      253,
+      0,
+      1,
+      2,
+      250
+    ],
+    "expect_to_base64": "__79AAEC-g",
+    "expect_to_hex": "fffefd000102fa"
+  },
+  "teamKeys": {
+    "teamRootKey": "AAAAAAAAAAAAAAAAAAAAAAAA",
+    "teamId": "e6d1d63a323151b691c9bbe0d92ca431",
+    "teamDocId": "team-e6d1d63a323151b691c9bbe0d92ca431",
+    "swarmKey": "c3ccee16216ce65c2b090001dbe84c34036f5b3571a635b519370fc20edd3134",
+    "e2eeKey": "4CDisTNkA9e8sRUN9O_o2m7GEDoFLlcwkaXAtq8jJVE"
+  },
+  "noteKeys": {
+    "docId": "note-0001",
+    "swarmKey": "6b98ecf160a6f2335ca3e93d84d5d61e9fa056c1d7a5d6d11920889f7cc42d44",
+    "e2eeKey": "2Z9Ahr26BSDdfQWfDkf82_uPjOXhw1ksEVGDDOlv7HA"
+  },
+  "identity_publicKey": "zKmihR35Jt2zmoH-Rx_adT6RCxyl_nPE8o001YPd-gM",
+  "ed25519_detached_signature_b64": "a3_k-Nzyb6cHnQUysTxAcQ4AXpPRsXcY3GAi6PVhwQCF2nyHrXOReIrSEKGrjKzXedIGX-TqyibJB1ZvF-nbCg",
+  "signature_verifies": true
+}

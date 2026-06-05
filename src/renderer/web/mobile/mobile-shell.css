@@ -1,0 +1,782 @@
+/* ============================================================================
+   mobile-shell.css — From-scratch mobile companion VIEW layer
+   ----------------------------------------------------------------------------
+   This stylesheet powers the brand-new mobile shell (src/renderer/web/mobile/*).
+   It is imported for side effects ONLY by mobile-main.js, AFTER main.js's
+   style.css is imported (style.css is imported at the top of main.js, which the
+   companion `await import()`s first). Because we load LAST, our equal-specificity
+   rules resolve in the shell's favor — the same ordering trick the abandoned
+   mobile.css relied on.
+
+   Two responsibilities:
+     1. The ONE global rule that hides the desktop UI wholesale:
+          body.is-mobile .window-layout { display: none !important; }
+        We do NOT fight `#sidebar { position: relative }` (style.css:3304) or any
+        off-canvas drawer math — the entire desktop layout is removed from the
+        visual flow and a brand-new #mobile-root takes over.
+     2. EVERYTHING else is scoped under #mobile-root (or body.is-mobile #mobile-root)
+        so it cannot leak into the desktop app or the dev-only web build (neither
+        of which ever sets body.is-mobile / mounts #mobile-root).
+
+   Aesthetic: Notion-mobile — clean, generous spacing, large readable type
+   (17px body), subtle separators, NO hover-dependent affordances, safe-area
+   aware, 100dvh, momentum scroll, >=44/48px tap targets.
+
+   Theming mirrors src/renderer/src/style.css :root (lines 14-23):
+     --bg --text --border --accent --text-muted --selection --editor-bg
+   with the same light-mode fallbacks so the shell themes consistently.
+   ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+   0. DESKTOP-HIDE  (the core fix for the broken reskin)
+   The single global, high-confidence rule. Scoped to body.is-mobile, which is
+   set ONLY by mobile.html, so the desktop app and dev web build are untouched.
+   --------------------------------------------------------------------------- */
+body.is-mobile .window-layout {
+  display: none !important;
+}
+
+/* Defensive: let any stray desktop overlay (toast stack) still surface above
+   the desktop layout if it leaks; selection-toolbar/popovers are not mounted
+   on any v1 mobile path. */
+body.is-mobile #offer-toast-stack {
+  z-index: 10001;
+}
+
+/* Guarded html/body resets — only when the mobile shell is active. */
+body.is-mobile,
+html:has(body.is-mobile) {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  height: 100%;
+}
+
+/* ---------------------------------------------------------------------------
+   1. ROOT + TOKENS
+   #mobile-root is a fixed, full-viewport flex column. All mobile-only sizing
+   tokens are scoped here alongside the mirrored canonical variables.
+   --------------------------------------------------------------------------- */
+#mobile-root {
+  /* canonical, mirrored from src/renderer/src/style.css :root (14-23) */
+  --bg: #f5f5f5;
+  --text: #333;
+  --border: #eaeaea;
+  --accent: #007bff;
+  --text-muted: #888;
+  --selection: #e3f2fd;
+  --editor-bg: #fff;
+
+  /* mobile-only sizing tokens */
+  --mob-header-h: 52px;
+  --mob-bottombar-h: 56px;
+  --mob-formatbar-h: 48px;
+  --mob-tap: 44px;                 /* min tap target */
+  --mob-radius: 10px;
+  --mob-row-h: 48px;
+
+  /* safe-area insets (mobile.html ships viewport-fit=cover) */
+  --mob-safe-top: env(safe-area-inset-top, 0px);
+  --mob-safe-right: env(safe-area-inset-right, 0px);
+  --mob-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --mob-safe-left: env(safe-area-inset-left, 0px);
+
+  position: fixed;
+  inset: 0;
+  height: 100dvh;                  /* dvh, not vh — keyboard/URL-bar safe */
+  display: flex;
+  flex-direction: column;
+  background: var(--editor-bg, #fff);
+  color: var(--text, #333);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  font-size: 17px;                 /* >=16px avoids iOS focus-zoom */
+  line-height: 1.4;
+  overflow: hidden;
+  z-index: 1000;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  touch-action: manipulation;      /* kill 300ms tap delay / double-tap zoom */
+  overscroll-behavior: none;
+}
+
+/* Universal box-sizing + kill the tap-highlight flash inside the shell. */
+#mobile-root *,
+#mobile-root *::before,
+#mobile-root *::after {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Buttons/inputs in the shell inherit type and reset chrome. */
+#mobile-root button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+#mobile-root input,
+#mobile-root textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* ---------------------------------------------------------------------------
+   2. NAV VIEWPORT + SCREEN TRANSITIONS
+   The nav host fills the space between (optional) chrome; screens are absolutely
+   positioned and slide in/out horizontally. nav.js toggles the classes and
+   removes the leaving node on transitionend (with a setTimeout fallback).
+   --------------------------------------------------------------------------- */
+#mobile-root .mob-navhost {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#mobile-root .mob-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--editor-bg, #fff);
+  overflow: hidden;
+  transform: translateX(0);
+  transition: transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: transform;
+}
+
+/* Incoming screen starts off-canvas right (push) and animates to 0. */
+#mobile-root .mob-screen--enter {
+  transform: translateX(100%);
+}
+
+/* Outgoing screen (being popped) animates off-canvas right. */
+#mobile-root .mob-screen--leave {
+  transform: translateX(100%);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #mobile-root .mob-screen {
+    transition: none;
+  }
+}
+
+/* Generic alias hooks the contract mentions (.screen-enter/.screen-exit). */
+#mobile-root .screen-enter {
+  transform: translateX(100%);
+}
+#mobile-root .screen-exit {
+  transform: translateX(100%);
+}
+
+/* Scrollable body region every screen places below its header. */
+#mobile-root .mob-screen-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* ---------------------------------------------------------------------------
+   3. HEADER (top app bar) + back affordance
+   Height var(--mob-header-h) plus safe-area top padding. Title centered/truncated.
+   --------------------------------------------------------------------------- */
+#mobile-root .mob-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: calc(var(--mob-header-h) + var(--mob-safe-top));
+  padding-top: var(--mob-safe-top);
+  padding-left: max(8px, var(--mob-safe-left));
+  padding-right: max(8px, var(--mob-safe-right));
+  background: var(--editor-bg, #fff);
+  border-bottom: 1px solid var(--border, #eaeaea);
+}
+
+#mobile-root .mob-header-left,
+#mobile-root .mob-header-right {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+#mobile-root .mob-header-right {
+  justify-content: flex-end;
+}
+
+#mobile-root .mob-header-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text, #333);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 4px;
+}
+
+/* When the title is a tappable affordance (rename hook) keep it obvious-but-quiet. */
+#mobile-root .mob-header-title.is-tappable {
+  cursor: text;
+}
+
+/* ---------------------------------------------------------------------------
+   4. ICON BUTTON  (>=44x44, NEVER hover-gated)
+   The desktop pattern reveals icons on :hover at opacity .6 — the shell must
+   never do that. Glyphs are always full-opacity; pressed feedback via :active.
+   --------------------------------------------------------------------------- */
+#mobile-root .mob-iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--mob-tap);
+  min-height: var(--mob-tap);
+  width: var(--mob-tap);
+  height: var(--mob-tap);
+  border-radius: 8px;
+  color: var(--text, #333);
+  opacity: 1;                      /* explicitly NOT hover-gated */
+  flex-shrink: 0;
+  transition: background-color 0.12s ease;
+}
+
+#mobile-root .mob-iconbtn svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+  pointer-events: none;           /* taps register on the button, not the svg */
+}
+
+#mobile-root .mob-iconbtn:active,
+#mobile-root .mob-iconbtn.is-pressed {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+#mobile-root .mob-iconbtn--active {
+  color: var(--accent, #007bff);
+}
+
+#mobile-root .mob-iconbtn[disabled] {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------------------
+   5. LIST ROW  (>=48px tappable; leading icon, title/subtitle, trailing, indent)
+   Used by Home (notes + teams), Search (results), SlideOver (teams + roster).
+   --------------------------------------------------------------------------- */
+#mobile-root .mob-listrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: var(--mob-row-h);
+  padding: 8px 16px;
+  text-align: left;
+  color: var(--text, #333);
+  border-bottom: 1px solid var(--border, #eaeaea);
+  background: transparent;
+  transition: background-color 0.12s ease;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#mobile-root .mob-listrow:active,
+#mobile-root .mob-listrow.is-pressed {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+#mobile-root .mob-listrow-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted, #888);
+}
+
+#mobile-root .mob-listrow-icon svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+#mobile-root .mob-listrow-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+#mobile-root .mob-listrow-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text, #333);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#mobile-root .mob-listrow-subtitle {
+  font-size: 13px;
+  color: var(--text-muted, #888);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#mobile-root .mob-listrow-trailing {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted, #888);
+}
+
+#mobile-root .mob-listrow-trailing svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+/* muted = dimmed/italic for locked restricted notes. */
+#mobile-root .mob-listrow--muted .mob-listrow-title {
+  color: var(--text-muted, #888);
+  font-style: italic;
+}
+#mobile-root .mob-listrow--muted .mob-listrow-icon {
+  opacity: 0.6;
+}
+
+/* Active / current selection highlight (slide-over current team). */
+#mobile-root .mob-listrow--active {
+  background: var(--selection, #e3f2fd);
+}
+#mobile-root .mob-listrow--active .mob-listrow-title {
+  color: var(--accent, #007bff);
+  font-weight: 600;
+}
+
+/* Search-result title highlight span. */
+#mobile-root .mob-hl {
+  background: var(--selection, #e3f2fd);
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+/* Section labels (slide-over "Teams"/"Members", list headings). */
+#mobile-root .mob-section-label {
+  padding: 18px 16px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted, #888);
+}
+
+/* Empty-state block (Home with no teams / no notes; Search no results). */
+#mobile-root .mob-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 48px 28px;
+  text-align: center;
+  color: var(--text-muted, #888);
+}
+
+#mobile-root .mob-empty-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text, #333);
+}
+
+#mobile-root .mob-empty-text {
+  font-size: 15px;
+  line-height: 1.5;
+  max-width: 30ch;
+}
+
+/* Primary pill button (empty-state CTA, slide-over actions). */
+#mobile-root .mob-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--mob-tap);
+  padding: 0 20px;
+  border-radius: 22px;
+  background: var(--accent, #007bff);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  transition: filter 0.12s ease;
+}
+
+#mobile-root .mob-btn:active {
+  filter: brightness(0.92);
+}
+
+#mobile-root .mob-btn--ghost {
+  background: transparent;
+  color: var(--accent, #007bff);
+  border: 1px solid var(--border, #eaeaea);
+}
+
+/* ---------------------------------------------------------------------------
+   6. BOTTOM BAR + FAB  (persistent nav; hidden while editing a note)
+   --------------------------------------------------------------------------- */
+#mobile-root .mob-bottombar {
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  height: calc(var(--mob-bottombar-h) + var(--mob-safe-bottom));
+  padding-bottom: var(--mob-safe-bottom);
+  padding-left: var(--mob-safe-left);
+  padding-right: var(--mob-safe-right);
+  background: var(--bg, #f5f5f5);
+  border-top: 1px solid var(--border, #eaeaea);
+}
+
+/* Hidden while a NoteScreen is focused/editing (the format bar takes over). */
+#mobile-root.is-editing .mob-bottombar {
+  display: none;
+}
+
+#mobile-root .mob-tab {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex: 1 1 0;
+  min-height: var(--mob-tap);
+  height: 100%;
+  color: var(--text-muted, #888);
+  font-size: 11px;
+  font-weight: 500;
+  transition: color 0.12s ease;
+}
+
+#mobile-root .mob-tab svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+
+#mobile-root .mob-tab.mob-tab--active {
+  color: var(--accent, #007bff);
+}
+
+#mobile-root .mob-tab:active {
+  color: var(--text, #333);
+}
+
+/* Centered raised FAB (New-note). Slot keeps spacing even when FAB is absolute. */
+#mobile-root .mob-fab-slot {
+  flex: 0 0 auto;
+  width: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#mobile-root .mob-fab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent, #007bff);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  transform: translateY(-12px);   /* raised above the bar */
+  transition: filter 0.12s ease, transform 0.12s ease;
+}
+
+#mobile-root .mob-fab svg {
+  width: 28px;
+  height: 28px;
+  display: block;
+}
+
+#mobile-root .mob-fab:active {
+  filter: brightness(0.92);
+  transform: translateY(-12px) scale(0.96);
+}
+
+/* ---------------------------------------------------------------------------
+   7. CM6 EDITOR ON MOBILE  (scoped to #mobile-root so desktop CM is untouched)
+   --------------------------------------------------------------------------- */
+#mobile-root .mob-editor-host {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--editor-bg, #fff);
+}
+
+#mobile-root .cm-editor {
+  height: 100%;
+  font-size: 17px;                 /* >=16px avoids iOS focus-zoom */
+  background: var(--editor-bg, #fff);
+}
+
+#mobile-root .cm-editor.cm-focused {
+  outline: none;
+}
+
+#mobile-root .cm-scroller {
+  padding: 16px 18px calc(var(--mob-formatbar-h) + 24px + var(--mob-safe-bottom));
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  line-height: 1.6;
+}
+
+#mobile-root .cm-content {
+  caret-color: var(--accent, #007bff);
+}
+
+/* Restricted / no-access note notice (NoteScreen when openNote throws). */
+#mobile-root .mob-restricted {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex: 1 1 auto;
+  padding: 40px 28px;
+  text-align: center;
+  color: var(--text-muted, #888);
+}
+
+#mobile-root .mob-restricted svg {
+  width: 40px;
+  height: 40px;
+  color: var(--text-muted, #888);
+}
+
+/* ---------------------------------------------------------------------------
+   8. FORMAT BAR  (rides the keyboard via JS-set `bottom`; CSS just lays it out)
+   position:fixed to the viewport; format-bar.js sets `bottom` from visualViewport
+   so it sits flush above the on-screen keyboard.
+   --------------------------------------------------------------------------- */
+#mobile-root .mob-formatbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--mob-formatbar-h);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  background: var(--bg, #f5f5f5);
+  border-top: 1px solid var(--border, #eaeaea);
+  padding: 0 6px;
+  padding-left: max(6px, var(--mob-safe-left));
+  padding-right: max(6px, var(--mob-safe-right));
+  z-index: 1050;
+  transform: translateY(100%);
+  transition: transform 0.15s ease;
+  scrollbar-width: none;
+}
+
+#mobile-root .mob-formatbar::-webkit-scrollbar {
+  display: none;
+}
+
+#mobile-root .mob-formatbar.is-visible {
+  transform: translateY(0);
+}
+
+/* Format-bar buttons: slightly tighter than nav icon buttons, still >=40px tap. */
+#mobile-root .mob-formatbar .mob-iconbtn {
+  min-width: 42px;
+  width: 42px;
+  height: var(--mob-formatbar-h);
+  border-radius: 6px;
+}
+
+#mobile-root .mob-formatbar .mob-fmt-sep {
+  flex: 0 0 auto;
+  width: 1px;
+  align-self: center;
+  height: 24px;
+  margin: 0 4px;
+  background: var(--border, #eaeaea);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #mobile-root .mob-formatbar {
+    transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   9. SEARCH SCREEN  (sticky input + results)
+   --------------------------------------------------------------------------- */
+#mobile-root .mob-search-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--editor-bg, #fff);
+  border-bottom: 1px solid var(--border, #eaeaea);
+}
+
+#mobile-root .mob-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: var(--mob-tap);
+  padding: 0 14px;
+  border-radius: 10px;
+  background: var(--bg, #f5f5f5);
+  border: 1px solid var(--border, #eaeaea);
+  font-size: 16px;                 /* >=16px avoids iOS focus-zoom */
+  color: var(--text, #333);
+  outline: none;
+}
+
+#mobile-root .mob-search-input::placeholder {
+  color: var(--text-muted, #888);
+}
+
+#mobile-root .mob-search-input:focus {
+  border-color: var(--accent, #007bff);
+}
+
+#mobile-root .mob-search-results {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* ---------------------------------------------------------------------------
+   10. SLIDE-OVER  (left panel + scrim — REPLACES the desktop sidebar)
+   Fixed to the viewport, above #mobile-root content via z-index.
+   --------------------------------------------------------------------------- */
+#mobile-root .mob-slideover-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 1060;
+}
+
+#mobile-root .mob-slideover {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 84vw;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg, #f5f5f5);
+  transform: translateX(-100%);
+  transition: transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
+  z-index: 1061;
+  padding-top: var(--mob-safe-top);
+  padding-left: var(--mob-safe-left);
+  padding-bottom: var(--mob-safe-bottom);
+  overflow: hidden;
+  will-change: transform;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12);
+}
+
+#mobile-root .mob-slideover--open .mob-slideover {
+  transform: translateX(0);
+}
+
+#mobile-root .mob-slideover--open .mob-slideover-scrim {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#mobile-root .mob-slideover-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--mob-header-h);
+  padding: 0 16px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text, #333);
+  border-bottom: 1px solid var(--border, #eaeaea);
+}
+
+#mobile-root .mob-slideover-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #mobile-root .mob-slideover,
+  #mobile-root .mob-slideover-scrim {
+    transition: none;
+  }
+}
+
+/* Presence dot for roster members (filled circle icon next to a name). */
+#mobile-root .mob-presence-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted, #888);
+  flex-shrink: 0;
+}
+
+#mobile-root .mob-presence-dot--online {
+  background: #2ec27e;
+}
+
+/* ---------------------------------------------------------------------------
+   11. The reused claim/login dialog (.td-box / .td-* from team-dialogs) is NOT
+   re-styled here — it is already full-bleed on mobile. We must not override any
+   .td-* selectors. (Intentionally no rules for .td-*.)
+   --------------------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------------------
+   12. Small-screen polish: roomier type on very narrow viewports.
+   --------------------------------------------------------------------------- */
+@media (max-width: 360px) {
+  #mobile-root .mob-header-title {
+    font-size: 16px;
+  }
+  #mobile-root .mob-listrow {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}

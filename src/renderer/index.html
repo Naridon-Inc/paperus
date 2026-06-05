@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Notionless</title>
+    <meta charset="utf-8">
+    <!-- Relaxed CSP for development + yjs/p2p requirements -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https: http: wss: ws:; 
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https: http:; 
+      style-src 'self' 'unsafe-inline' https: http:; 
+      font-src 'self' data: https: http:; 
+      connect-src 'self' https: http: wss: ws:;
+      img-src 'self' data: blob: https: http:;
+      frame-src 'self' data: blob:;
+      child-src 'self' data: blob:;
+    ">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css">
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

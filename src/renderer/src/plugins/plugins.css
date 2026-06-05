@@ -1,0 +1,1076 @@
+/* plugins.css — all styles for the Notionless plugin system.
+ *
+ * Low-border, light aesthetic matching the host app's CSS variables
+ * (--bg, --text, --border, --accent, --text-muted, --editor-bg). Imported once
+ * from main.js alongside style.css.
+ *
+ * Scope: the Plugin Lab view (#plugin-lab-view / .plugin-lab), the plugin manager
+ * list, generated-plugin preview, capability chips, status-item slots, and the
+ * hidden sandbox host iframes.
+ */
+
+/* ── Sandbox host iframes: always hidden, never interactive ─────────────────── */
+.plugin-sandbox-frame,
+iframe[data-plugin-sandbox] {
+  display: none !important;
+  position: absolute;
+  width: 0;
+  height: 0;
+  border: 0;
+  visibility: hidden;
+}
+
+/* ── The Plugin Lab view container ─────────────────────────────────────────── */
+#plugin-lab-view {
+  flex: 1;
+  min-width: 0;
+  /* The inner .plugin-lab is the scroll owner (app-shell), so the view itself
+     never double-scrolls. */
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* Full-height app-shell: a flex column that fills the view. The body fills the
+   middle and the chat thread / files body scroll internally — so there's no
+   page-level scrollbar in the common case. */
+.plugin-lab {
+  max-width: none;
+  margin: 0;
+  padding: 24px 28px 24px;
+  box-sizing: border-box;
+  height: 100%;
+  /* #plugin-lab-view is toggled to display:flex (a row flex) when shown, so the
+     inner shell must grow to fill the row — otherwise it collapses to its content
+     width and leaves an empty strip on the right. */
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  color: var(--text);
+  font-size: 14px;
+  position: relative;
+}
+
+/* ── Header ────────────────────────────────────────────────────────────────── */
+.plugin-lab-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.plugin-lab-title {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: var(--text);
+}
+
+.plugin-lab-subtitle {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.plugin-lab-header-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ── Cards (low border) ────────────────────────────────────────────────────── */
+.plugin-lab .card {
+  background: var(--editor-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px;
+  margin-bottom: 20px;
+}
+
+.plugin-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plugin-card-title i {
+  color: var(--accent);
+  font-size: 13px;
+}
+
+.plugin-card-hint {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+/* ── Buttons ───────────────────────────────────────────────────────────────── */
+.plugin-btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1;
+  transition: background 0.12s ease, border-color 0.12s ease, opacity 0.12s ease;
+}
+
+.plugin-btn:hover {
+  background: var(--editor-bg);
+  border-color: var(--accent);
+}
+
+.plugin-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.plugin-btn.primary:hover {
+  filter: brightness(1.06);
+}
+
+.plugin-btn.danger {
+  color: #c0392b;
+}
+
+.plugin-btn.danger:hover {
+  border-color: #c0392b;
+  background: #fdecea;
+}
+
+.plugin-btn:disabled,
+.plugin-btn.busy {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.plugin-btn.busy {
+  position: relative;
+}
+
+.plugin-btn i {
+  font-size: 12px;
+}
+
+/* ── Generate-with-Claude box ──────────────────────────────────────────────── */
+.plugin-gen-input {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 64px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.5;
+  outline: none;
+}
+
+.plugin-gen-input:focus {
+  border-color: var(--accent);
+  background: var(--editor-bg);
+}
+
+.plugin-gen-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  align-items: center;
+}
+
+.plugin-gen-preview {
+  margin-top: 14px;
+}
+
+.plugin-gen-preview:empty {
+  display: none;
+}
+
+.plugin-gen-status {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin: 6px 0;
+}
+
+.plugin-gen-stream {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 320px;
+  overflow: auto;
+  color: var(--text);
+  margin: 6px 0;
+}
+
+.plugin-gen-error {
+  background: #fdecea;
+  border: 1px solid #f5c6cb;
+  color: #b3261e;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  margin: 6px 0;
+  line-height: 1.5;
+}
+
+.plugin-gen-result {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--bg);
+  margin: 6px 0;
+}
+
+.plugin-gen-result-title {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.plugin-gen-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+/* ── Installed plugins list ────────────────────────────────────────────────── */
+.plugin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.plugin-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 13px 15px;
+  background: var(--bg);
+  transition: border-color 0.12s ease;
+}
+
+.plugin-row.enabled {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: var(--editor-bg);
+}
+
+.plugin-row.error {
+  border-color: #f5c6cb;
+  color: #b3261e;
+  font-size: 12px;
+}
+
+.plugin-row-meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.plugin-row-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.plugin-row-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.plugin-row-version,
+.plugin-row-source {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 1px 6px;
+}
+
+.plugin-row.enabled .plugin-row-version,
+.plugin-row.enabled .plugin-row-source {
+  background: var(--bg);
+}
+
+.plugin-row-state {
+  font-size: 11px;
+  border-radius: 5px;
+  padding: 1px 7px;
+  font-weight: 500;
+}
+
+.plugin-row-state.on {
+  color: #1e7e34;
+  background: #e6f4ea;
+}
+
+.plugin-row-state.off {
+  color: var(--text-muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.plugin-row-desc {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+  margin-bottom: 8px;
+}
+
+.plugin-row-caps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.plugin-row-caps.muted {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-style: italic;
+}
+
+.plugin-row-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.plugin-row-actions .plugin-btn {
+  padding: 6px 10px;
+}
+
+/* ── Capability chips ──────────────────────────────────────────────────────── */
+.plugin-cap-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 1px 7px;
+  white-space: nowrap;
+  cursor: help;
+}
+
+.plugin-cap-chip.sensitive {
+  color: #8a5a00;
+  background: #fff5e0;
+  border-color: #ffe0a3;
+}
+
+.plugin-row-caps .muted {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ── Empty state ───────────────────────────────────────────────────────────── */
+.plugin-empty {
+  text-align: center;
+  padding: 36px 16px;
+  color: var(--text-muted);
+}
+
+.plugin-empty-icon {
+  font-size: 28px;
+  color: var(--border);
+  margin-bottom: 10px;
+}
+
+.plugin-empty-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.plugin-empty-sub {
+  font-size: 12px;
+}
+
+/* ── Toasts ────────────────────────────────────────────────────────────────── */
+.plugin-lab-toasts {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.plugin-lab-toast {
+  pointer-events: auto;
+  background: var(--editor-bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  max-width: 320px;
+  animation: plugin-toast-in 0.15s ease;
+}
+
+.plugin-lab-toast.success { border-left-color: #2eaa54; }
+.plugin-lab-toast.warn { border-left-color: #e0a106; }
+.plugin-lab-toast.error { border-left-color: #d0392b; }
+.plugin-lab-toast.info { border-left-color: var(--accent); }
+
+@keyframes plugin-toast-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Full-width split body: builder chat (in body) + files-preview (card) ──── */
+.plugin-lab-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 28px;
+  /* stretch (not start) so both panes fill the body's height; their inner
+     regions scroll rather than the page. */
+  align-items: stretch;
+  margin-bottom: 20px;
+}
+
+.plugin-lab-body > .card {
+  margin-bottom: 0;
+}
+
+/* The builder is a tall, self-contained chat column that sits directly IN THE
+   BODY — no card chrome (no border/background box), more open and spacious. */
+.plugin-lab-builder {
+  display: flex;
+  flex-direction: column;
+  /* Fills the body row (align-items: stretch); the thread inside scrolls. */
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.plugin-chat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 2px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.plugin-chat-head .plugin-card-title {
+  margin-bottom: 0;
+}
+
+.plugin-chat-backend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+.plugin-chat-backend-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #2eaa54;
+  flex-shrink: 0;
+}
+
+/* Scrollable message thread. In-body builder: only a touch of top padding so
+   it reads as open space rather than a boxed pane. */
+.plugin-chat-thread {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Empty-thread welcome + starter template grid. Sits in the upper-center (not
+   dead-center) so the starters read as the primary call to action instead of
+   floating in the middle of a tall column. */
+.plugin-chat-welcome {
+  margin: clamp(12px, 7vh, 72px) auto auto;
+  text-align: center;
+  width: 100%;
+  max-width: 720px;
+  align-self: center;
+  color: var(--text-muted);
+  padding: 8px 0;
+}
+
+.plugin-chat-welcome-icon {
+  font-size: 26px;
+  color: var(--accent);
+  opacity: 0.85;
+  margin-bottom: 10px;
+}
+
+.plugin-chat-welcome-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.plugin-chat-welcome-sub {
+  font-size: 12.5px;
+  line-height: 1.55;
+  margin-bottom: 20px;
+}
+
+/* Starter template cards (icon + title + one-line blurb). */
+.plugin-template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+  text-align: left;
+}
+
+.plugin-template-card {
+  appearance: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  border: 1px solid var(--border);
+  background: var(--editor-bg);
+  color: var(--text);
+  padding: 13px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.12s ease, background 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.plugin-template-card:hover {
+  border-color: var(--accent);
+  background: var(--bg);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+.plugin-template-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  font-size: 14px;
+}
+
+.plugin-template-text {
+  min-width: 0;
+}
+
+.plugin-template-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.plugin-template-desc {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+/* Message bubbles. */
+.plugin-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 100%;
+}
+
+.plugin-msg-role {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.plugin-msg-body {
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+}
+
+.plugin-msg.user {
+  align-self: flex-end;
+  align-items: flex-end;
+  max-width: 85%;
+}
+
+.plugin-msg.user .plugin-msg-body {
+  background: var(--accent);
+  color: #fff;
+  padding: 9px 13px;
+  border-radius: 12px 12px 4px 12px;
+}
+
+.plugin-msg.assistant {
+  align-self: flex-start;
+  width: 100%;
+}
+
+.plugin-msg.assistant .plugin-msg-body {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 10px 13px;
+  border-radius: 4px 12px 12px 12px;
+}
+
+.plugin-msg-body.is-streaming::after {
+  content: '▍';
+  color: var(--accent);
+  animation: plugin-caret 1s steps(2) infinite;
+}
+
+@keyframes plugin-caret {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.plugin-msg-status {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 6px 2px 0;
+}
+
+/* The inline "what got built" result card. */
+.plugin-msg-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.plugin-result-card {
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  background: var(--editor-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.plugin-result-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.plugin-result-name {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.plugin-result-id {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.plugin-result-badge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.plugin-result-badge.new {
+  background: rgba(46, 170, 84, 0.12);
+  border-color: rgba(46, 170, 84, 0.4);
+  color: #2eaa54;
+}
+
+.plugin-result-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.plugin-result-hint {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* Composer at the bottom of the in-body builder: a self-contained pill so it
+   reads cleanly without card chrome around the column. */
+.plugin-chat-composer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 12px 14px;
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--editor-bg);
+}
+
+.plugin-chat-composer:focus-within {
+  border-color: var(--accent);
+}
+
+.plugin-chat-input {
+  flex: 1;
+  resize: none;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 9px 12px;
+  border-radius: 9px;
+  max-height: 160px;
+  outline: none;
+  transition: border-color 0.12s ease;
+}
+
+.plugin-chat-input:focus {
+  border-color: var(--accent);
+}
+
+.plugin-chat-input:disabled {
+  opacity: 0.6;
+}
+
+.plugin-chat-send {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 9px;
+}
+
+/* Right pane: the single files-preview CARD for the current artifact.
+   Same tall, self-contained shape as the builder column beside it. */
+.plugin-lab-files {
+  display: flex;
+  flex-direction: column;
+  /* Fills the body row (align-items: stretch); the files body scrolls. */
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Compact, non-card header inside the card: name/id + Enable, then caps. */
+.plugin-files-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.plugin-files-headline { min-width: 0; }
+
+.plugin-files-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.plugin-files-id {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--mono, monospace);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.plugin-files-enable { flex-shrink: 0; }
+
+.plugin-files-caps {
+  grid-column: 1 / -1;
+}
+
+/* The dominant content: the generated files as scrollable code views. */
+.plugin-files-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.plugin-files-file { margin-bottom: 16px; }
+.plugin-files-file:last-child { margin-bottom: 0; }
+
+.plugin-files-file-name {
+  font-size: 12px; font-weight: 600; color: var(--text-muted);
+  font-family: var(--mono, monospace); margin-bottom: 6px;
+}
+
+/* Files-preview empty state (before the first plugin exists). */
+.plugin-files-empty {
+  margin: auto;
+  text-align: center;
+  max-width: 320px;
+  color: var(--text-muted);
+  padding: 24px;
+}
+
+.plugin-files-empty-icon { font-size: 26px; color: var(--accent); opacity: 0.8; margin-bottom: 12px; }
+.plugin-files-empty-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.plugin-files-empty-sub { font-size: 12.5px; line-height: 1.55; }
+
+.plugin-code {
+  margin: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  overflow-x: auto;
+  white-space: pre;
+  color: var(--text);
+}
+.plugin-code code { font: inherit; color: inherit; background: none; }
+
+/* Full-width strip: installed plugins, beneath the builder/files split. Fixed in
+   the app-shell column so it pins below the panes (never shrinks). */
+.plugin-lab-installed {
+  flex: 0 0 auto;
+  display: block;
+}
+
+.plugin-lab-installed .plugin-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+/* ── "Installed" header button + count badge ──────────────────────────────── */
+.plugin-installed-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 2px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+
+/* ── Installed-plugins modal ──────────────────────────────────────────────── */
+.plugin-modal-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: rgba(0, 0, 0, 0.28);
+  animation: plugin-modal-fade 0.12s ease;
+}
+
+@keyframes plugin-modal-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.plugin-modal {
+  width: 100%;
+  max-width: 720px;
+  max-height: 82%;
+  display: flex;
+  flex-direction: column;
+  background: var(--editor-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 20px 56px rgba(0, 0, 0, 0.24);
+  overflow: hidden;
+}
+
+.plugin-modal-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.plugin-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.plugin-modal-title i {
+  color: var(--accent);
+  font-size: 14px;
+}
+
+.plugin-modal-close {
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 15px;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.plugin-modal-close:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.plugin-modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.plugin-modal-body .plugin-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+/* Stack the panes on narrow viewports. */
+@media (max-width: 900px) {
+  .plugin-lab-body {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .plugin-lab-builder,
+  .plugin-lab-files {
+    height: 60vh;
+  }
+  .plugin-lab-installed .plugin-list {
+    grid-template-columns: 1fr;
+  }
+  .plugin-template-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Plugin-contributed status items (footer/header slots) ─────────────────── */
+.plugin-status-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 0 6px;
+  white-space: nowrap;
+}
+
+.plugin-status-item:empty {
+  display: none;
+}
+
+/* ── Plugin-mounted UI error chip (degrade-not-crash for bad renders) ──────── */
+.plugin-render-error {
+  display: inline-block;
+  font-size: 11px;
+  color: #b3261e;
+  background: #fdecea;
+  border: 1px solid #f5c6cb;
+  border-radius: 5px;
+  padding: 2px 7px;
+}
+
+/* ── Plugin settings cards (settings overlay sections) ─────────────────────── */
+.plugin-settings-card {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 16px;
+  background: var(--editor-bg);
+  margin-bottom: 14px;
+}
+
+.plugin-settings-card-title {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 10px;
+}

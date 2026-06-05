@@ -1,0 +1,22 @@
+{
+  "id": "com.notionless.ai-summarize",
+  "name": "AI Summarize",
+  "version": "1.0.0",
+  "apiVersion": "1",
+  "description": "Summarize the current note with a slash command and a right-side panel that streams tokens from ctx.ai.complete().",
+  "author": "Naridon Inc. <plugins@notionless.example>",
+  "license": "MIT",
+  "entry": "index.js",
+  "capabilities": ["commands", "ai", "ui", "editor"],
+  "contributes": {
+    "commands": [
+      { "id": "summarize", "title": "Summarize note", "key": "Mod-Shift-S", "when": "editorFocus" }
+    ],
+    "slash": [
+      { "label": "Summarize note", "icon": "<i class=\"fas fa-wand-magic-sparkles\"></i>", "command": "summarize" }
+    ],
+    "panels": [
+      { "id": "summary", "title": "Summary", "location": "right" }
+    ]
+  }
+}

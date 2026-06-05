@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>RN transport peer (browser side)</title>
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; background:#191919; color:#e8e8e8; padding:24px; }
+    h1 { font-size:18px; }
+    #status { color:#7bd88f; font-weight:700; }
+    pre { background:#232323; padding:12px; border-radius:8px; font-size:12px; white-space:pre-wrap; }
+    .log { color:#8a8a8a; font-size:11px; font-family:Menlo,monospace; }
+  </style>
+</head>
+<body>
+  <h1>Notionless · transport peer (browser)</h1>
+  <div id="status">starting…</div>
+  <p>peers: <span id="peers">0</span> · synced: <span id="synced">no</span></p>
+  <h3>merged doc</h3>
+  <pre id="map">{}</pre>
+  <h3>log</h3>
+  <div id="log"></div>
+
+  <script type="module">
+    import * as Y from 'https://esm.sh/yjs@13.6.31';
+    import { WebrtcProvider } from 'https://esm.sh/y-webrtc@10.3.0?deps=yjs@13.6.31';
+
+    const ROOM = 'notionless-rn-interop-v1';
+    const SIGNALING = ['ws://localhost:4455']; // password-less, matches the RN peer (logged relay)
+
+    const $ = (id) => document.getElementById(id);
+    const log = (m) => {
+      const d = document.createElement('div');
+      d.className = 'log';
+      d.textContent = new Date().toISOString().slice(11, 19) + '  ' + m;
+      $('log').prepend(d);
+    };
+
+    const doc = new Y.Doc();
+    const provider = new WebrtcProvider(ROOM, doc, {
+      signaling: SIGNALING,
+      maxConns: 20,
+      filterBcConns: true,
+      peerOpts: { config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] } },
+    });
+
+    const map = doc.getMap('m');
+    map.set('fromBrowser', 'hello from browser @ ' + new Date().toISOString().slice(11, 19));
+
+    const render = () => { $('map').textContent = JSON.stringify(map.toJSON(), null, 1); };
+    map.observeDeep(() => { render(); log('map: ' + JSON.stringify(map.toJSON())); });
+    render();
+
+    provider.on('status', (e) => { $('status').textContent = e.connected ? 'signaling connected' : 'signaling connecting…'; log('status ' + JSON.stringify(e)); });
+    provider.on('synced', (e) => { $('synced').textContent = 'yes'; log('synced ' + JSON.stringify(e)); });
+    provider.on('peers', (e) => { $('peers').textContent = (e.webrtcPeers || []).length; log('peers webrtc=' + (e.webrtcPeers || []).length + ' bc=' + (e.bcPeers || []).length); });
+
+    window._doc = doc; window._map = map; window._provider = provider;
+    log('joined ' + ROOM + ' via ' + SIGNALING[0]);
+  </script>
+</body>
+</html>

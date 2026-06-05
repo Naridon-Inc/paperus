@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "9008:9008"
+    volumes:
+      # Mount src for live reload if using nodemon (dev mode)
+      - ./backend/src:/app/src
+    environment:
+      - PORT=9008
+      - NODE_ENV=development
+    restart: unless-stopped

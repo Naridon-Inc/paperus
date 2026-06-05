@@ -1,0 +1,7 @@
+ignoredBuiltDependencies:
+  - bufferutil
+  - core-js
+  - electron
+  - electron-winstaller
+  - esbuild
+  - utf-8-validate
