@@ -1,6 +1,6 @@
 # Security Policy
 
-Notionless is **end-to-end encrypted, zero-account, and peer-to-peer**. No server
+Paperus is **end-to-end encrypted, zero-account, and peer-to-peer**. No server
 ever holds a readable copy of your notes, your password, or your keys. We take
 security seriously and appreciate responsible disclosure.
 
@@ -77,6 +77,6 @@ leaking to peers despite E2EE — that is exactly what we want to hear about.
 
 ## Supported versions
 
-Notionless is pre-1.0 / beta. Security fixes land on `master` and ship in the
+Paperus is pre-1.0 / beta. Security fixes land on `master` and ship in the
 next release. We don't backport to older tagged releases — please test against
 the latest `master` or release before reporting.

@@ -1,6 +1,6 @@
-# Contributing to Notionless
+# Contributing to Paperus
 
-Thanks for your interest in Notionless — an open-source, local-first, zero-account,
+Thanks for your interest in Paperus — an open-source, local-first, zero-account,
 pure-P2P Notion alternative. This guide covers how to get set up, the project
 layout, and what we expect in a pull request.
 
@@ -12,7 +12,7 @@ By participating you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md)
 
 - **Report bugs** and **request features** via [GitHub Issues](../../issues).
 - **Fix bugs / add features** via pull requests (see the checklist below).
-- **Write plugins** — extend Notionless without forking through the sandboxed,
+- **Write plugins** — extend Paperus without forking through the sandboxed,
   capability-scoped plugin API. See [docs/PLUGIN_SYSTEM.md](docs/PLUGIN_SYSTEM.md).
 - **Improve docs** — README, the `docs/` folder, code comments.
 - **Report security issues privately** — do **not** open a public issue; follow

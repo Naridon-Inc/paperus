@@ -1,7 +1,7 @@
-# Notionless Plugin API — llms.txt (apiVersion "1")
+# Paperus Plugin API — llms.txt (apiVersion "1")
 
 > One-shot reference for AI agents (Claude Code, Cursor, etc.) authoring a
-> Notionless plugin. This file is intentionally compact and complete: read it,
+> Paperus plugin. This file is intentionally compact and complete: read it,
 > then emit a `plugin.json` + `index.js` that conforms. The normative source is
 > `docs/PLUGIN_API_CONTRACT.md`; this is the author-facing distillation.
 

@@ -11,7 +11,7 @@ You open **Plugin Studio**, type *"add a Pomodoro timer to the sidebar that
 pauses when I'm typing,"* pick your coding agent — **Claude Code, Gemini CLI,
 your own API key, or anything you have installed** — and hit **Build**. The agent
 writes a real plugin in a scratch workspace that already contains the full
-Notionless plugin guide, the API types, and five working examples, so it gets it
+Paperus plugin guide, the API types, and five working examples, so it gets it
 right. The plugin **hot-loads live** into a preview pane as it's written; build
 and runtime errors are fed **back to the agent automatically** so it fixes
 itself. You can chat to refine it ("make the timer red"), edit the code by hand
@@ -39,7 +39,7 @@ box in `src/renderer/src/plugins/plugin-lab.js`.
    coder can drop to the code editor or an external IDE at any point.
 
 **Non-goals**
-- Not a general IDE. Scope is *Notionless plugins* only.
+- Not a general IDE. Scope is *Paperus plugins* only.
 - Does **not** relax the runtime sandbox or capability model (§6).
 - No hosted build service — everything runs on the user's machine (local-first).
 
@@ -143,7 +143,7 @@ Three adapter strategies cover everything:
      Any agent that edits files in a directory plugs in here with zero code.
 
 2. **API adapter** (`kind:'api'`) — for users with only an API key or a local
-   model and **no CLI installed**. Notionless runs its **own** minimal agent loop
+   model and **no CLI installed**. Paperus runs its **own** minimal agent loop
    with a fixed toolset (`read_file`, `write_file`, `list_dir`, `run_build`,
    `run_lint`) over the workspace, system prompt = the author guide + surface
    catalog. Routes through the **existing** AI backend seam
@@ -152,7 +152,7 @@ Three adapter strategies cover everything:
    tooling.
 
 3. **External adapter** (`kind:'external'`) — "Open workspace in your editor."
-   Opens the build dir in VS Code / Cursor / `$EDITOR`; Notionless keeps watching
+   Opens the build dir in VS Code / Cursor / `$EDITOR`; Paperus keeps watching
    and hot-reloading. The escape hatch for power users and unsupported agents.
 
 Harnesses are **auto-detected** (`detect()`); unavailable ones are shown disabled

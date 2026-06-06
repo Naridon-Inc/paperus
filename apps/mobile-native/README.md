@@ -1,6 +1,6 @@
-# Notionless Mobile (native companion)
+# Paperus Mobile (native companion)
 
-A native iOS/Android companion for [Notionless](../../README.md) — the
+A native iOS/Android companion for [Paperus](../../README.md) — the
 open-source, local-first, zero-account, pure-P2P Notion alternative.
 
 The phone is a **companion to a desktop team**, not a standalone product. You
@@ -126,7 +126,7 @@ connection.
 
 ### On the phone
 
-1. Open Notionless → **"Add a team"**.
+1. Open Paperus → **"Add a team"**.
 2. Either:
    - **Scan** the desktop's QR with the camera, **or**
    - **Paste** the `notionless-pair:` link (a plain `notionless-team:<key>` link
@@ -192,7 +192,7 @@ adb shell am start -a android.intent.action.VIEW -d "notionless://pair#<payload>
 | Paired but **no pages** show up | Relay mismatch — make the phone's Settings → Signaling overlap the desktop's, and keep a desktop peer online (P2P needs ≥1 peer reachable). |
 | "Waiting for a desktop peer…" forever | The desktop app for that team isn't running, or it's on a different relay/network. |
 | Pairing link **rejected/expired** | Links live 72h — mint a fresh one from the desktop's "Link a device" dialog. |
-| Camera won't open for QR | Grant camera permission (iOS Settings → Notionless → Camera); the prompt copy is set in `app.json`. |
+| Camera won't open for QR | Grant camera permission (iOS Settings → Paperus → Camera); the prompt copy is set in `app.json`. |
 | Icons render as **empty boxes (tofu)** | The Ionicons TTF didn't load — do a clean native rebuild (`npm run ios`/`android`); the app preloads `Ionicons.font` on boot. |
 | App stuck in **light** mode in dark OS | Ensure `app.json` has `"userInterfaceStyle": "automatic"` and rebuild natively (the value is baked into `Info.plist` at build time). |
 | Pods out of date after a dep bump (iOS) | `cd ios && pod install` (or just re-run `npm run ios`). |
@@ -232,5 +232,5 @@ apps/mobile-native/
 
 ---
 
-Part of [Notionless](../../README.md). Licensed under
+Part of [Paperus](../../README.md). Licensed under
 [AGPL-3.0](../../LICENSE) © Naridon Inc.

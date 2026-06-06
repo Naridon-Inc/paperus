@@ -1,7 +1,7 @@
-# AGENTS.md — building a Notionless plugin (for AI coding agents)
+# AGENTS.md — building a Paperus plugin (for AI coding agents)
 
 This file tells an AI agent (Claude Code, Cursor, Copilot, etc.) everything it needs
-to **one-shot a working Notionless plugin**. Read this top to bottom, then output a
+to **one-shot a working Paperus plugin**. Read this top to bottom, then output a
 `plugin.json` + `index.js`. For the full author distillation see
 [`docs/llms.txt`](docs/llms.txt); the frozen normative spec is
 [`docs/PLUGIN_API_CONTRACT.md`](docs/PLUGIN_API_CONTRACT.md) (`apiVersion: "1"`).

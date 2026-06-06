@@ -1,6 +1,6 @@
 # @notionless/create-notionless-plugin
 
-Scaffolder for [Notionless](https://github.com/Naridon-Inc/Notionless) plugins.
+Scaffolder for [Paperus](https://github.com/Naridon-Inc/paperus) plugins.
 Targets the **FROZEN Plugin API v1** (`apiVersion: "1"`).
 
 ## Usage (CLI)

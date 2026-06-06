@@ -1,6 +1,6 @@
 # Your own private cloud sync (optional)
 
-Notionless works with **no server at all**. Your notes sync straight between your
+Paperus works with **no server at all**. Your notes sync straight between your
 own devices and your teammates, end‑to‑end encrypted. Nothing is stored in any
 company's cloud. That's the default, and for most people it's perfect.
 
@@ -44,7 +44,7 @@ That's the whole shopping list.
 
 ## Step 1 — Turn the box on (one command)
 
-Copy the Notionless folder onto the box (`git clone` it), then run:
+Copy the Paperus folder onto the box (`git clone` it), then run:
 
 ```bash
 docker compose -f docker-compose.cloud.yml up -d
@@ -139,5 +139,5 @@ localStorage.removeItem('notionless_cloud_sync_url'); location.reload();
 | `notionless_cloud_sync_url` | the app (localStorage) | Per‑user runtime address of your box. |
 | `VITE_CLOUD_SYNC_URL` | app build | Bakes the box address into a build for the whole team. |
 
-Leave all of these unset and Notionless behaves exactly as before: pure,
+Leave all of these unset and Paperus behaves exactly as before: pure,
 serverless, end‑to‑end‑encrypted peer‑to‑peer.

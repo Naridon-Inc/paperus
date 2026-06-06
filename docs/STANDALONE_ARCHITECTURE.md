@@ -1,6 +1,6 @@
 # Standalone Architecture
 
-Notionless is a **standalone, local-first** application: it works fully offline with
+Paperus is a **standalone, local-first** application: it works fully offline with
 **no account, no login, and no cloud service holding your data**. This document
 describes how the app runs on its own and how optional peer-to-peer collaboration
 is layered on top without introducing a backend that stores anything.

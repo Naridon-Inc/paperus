@@ -1,8 +1,8 @@
 # @notionless/plugin-sdk
 
-Authoring SDK for [Notionless](https://github.com/Naridon-Inc/Notionless) plugins.
+Authoring SDK for [Paperus](https://github.com/Naridon-Inc/paperus) plugins.
 Targets the **FROZEN Plugin API v1** (`apiVersion: "1"`). The authoritative
-contract is `docs/PLUGIN_API_CONTRACT.md` in the Notionless repo.
+contract is `docs/PLUGIN_API_CONTRACT.md` in the Paperus repo.
 
 ## Install
 
@@ -14,7 +14,7 @@ npm create @notionless/plugin
 
 ## What it is
 
-A Notionless plugin is a plain ESM module whose **default export** is an object
+A Paperus plugin is a plain ESM module whose **default export** is an object
 with `activate(ctx)` and an optional `deactivate()`. This SDK ships:
 
 - `definePlugin(impl)` — a thin identity helper (with light shape validation)

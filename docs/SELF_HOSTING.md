@@ -1,6 +1,6 @@
-# Self-host Notionless (your own web app, your own domain)
+# Self-host Paperus (your own web app, your own domain)
 
-Notionless is local-first and works with **no server at all** — the desktop app
+Paperus is local-first and works with **no server at all** — the desktop app
 syncs peer-to-peer, end-to-end encrypted, and the only thing we host is a tiny
 stateless relay. But you can run **the whole thing yourself**: the web app *and*
 the relay, on your own box, at your own domain like `docs.yourcompany.com`, with
@@ -59,7 +59,7 @@ running on your server or laptop. It clones, configures, launches, and hands you
 URL — asking you for your domain along the way:
 
 ```text
-Set up Notionless (https://github.com/Naridon-Inc/Notionless) on this machine — a
+Set up Paperus (https://github.com/Naridon-Inc/paperus) on this machine — a
 self-hosted, end-to-end-encrypted, local-first Notion alternative. Steps:
 
 1. Make sure Docker + Docker Compose are installed and running (install if needed).
@@ -138,7 +138,7 @@ A `vercel.json` is committed at the repo root (build `pnpm run build:web`, outpu
    Optionally `VITE_CLOUD_SYNC_URL = wss://<your-relay>/yjs` for always-on sync.
 3. **Deploy.** Add your custom domain in **Settings → Domains**; Vercel handles TLS.
 
-One-click: `https://vercel.com/new/clone?repository-url=https://github.com/Naridon-Inc/Notionless&env=VITE_SIGNALING_URL`
+One-click: `https://vercel.com/new/clone?repository-url=https://github.com/Naridon-Inc/paperus&env=VITE_SIGNALING_URL`
 
 ### Option 3 — Web app on Netlify
 
@@ -202,8 +202,8 @@ A `render.yaml` Blueprint is committed:
 ### Option 8 — Relay on a plain VPS
 
 ```bash
-git clone https://github.com/Naridon-Inc/Notionless.git
-cd Notionless/backend
+git clone https://github.com/Naridon-Inc/paperus.git
+cd paperus/backend
 npm install
 RELAY_ONLY=true PORT=9008 npm start
 ```

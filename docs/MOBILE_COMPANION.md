@@ -1,7 +1,7 @@
 # Mobile Companion Architecture
 
 > Status: design (foundation slice). This document is the implementation contract for the
-> Notionless mobile companion. Build agents implement directly from it. It cites real seams in
+> Paperus mobile companion. Build agents implement directly from it. It cites real seams in
 > `src/renderer/src/` — **do not invent a parallel crypto scheme**; every key/id and every
 > signature reuses `team-keys.js`, `team-roster.js`, `e2ee.js`, and the `openP2PDoc` chokepoint.
 
@@ -53,7 +53,7 @@ few humans are online. A companion does **none** of that. It is a **leaf**:
 2. **Storage quota.** Mobile IndexedDB quotas are small (often ~50 MB) vs. effectively unbounded on
    Electron. Blind-replicating every note's ciphertext would blow the quota on a large team. (See
    `_reconcileReplicas` — it already early-returns on web; the companion keeps that behavior.)
-3. **Trust/availability model is unchanged.** Notionless already assumes *≥1 human online* for pure
+3. **Trust/availability model is unchanged.** Paperus already assumes *≥1 human online* for pure
    P2P availability (the relay stores nothing). Adding a flaky phone as a "replica" would create a
    false sense of durability. The desktop fleet remains the durable tier; the phone is a viewer/
    editor that catches up when it reconnects. Yjs CRDTs merge its offline edits with zero conflict
@@ -399,7 +399,7 @@ visibility/foreground wiring from §3.3.
 
 ### 4.4 PWA assets
 
-- `src/renderer/mobile/manifest.webmanifest`: `name`/`short_name` "Notionless", `start_url: "./"`,
+- `src/renderer/mobile/manifest.webmanifest`: `name`/`short_name` "Paperus", `start_url: "./"`,
   `display: "standalone"`, `scope: "./"`, `background_color`/`theme_color`, `orientation:
   "portrait-primary"`, and 192/512 icons.
 - `src/renderer/mobile/service-worker.js`: minimal v1 — `skipWaiting`/`clients.claim` + a

@@ -2,7 +2,7 @@
 
 ## Our pledge
 
-We want Notionless to be a welcoming, harassment-free project for everyone,
+We want Paperus to be a welcoming, harassment-free project for everyone,
 regardless of age, body size, visible or invisible disability, ethnicity, sex
 characteristics, gender identity and expression, level of experience, education,
 socio-economic status, nationality, personal appearance, race, religion, or

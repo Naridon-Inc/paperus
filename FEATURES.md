@@ -1,4 +1,4 @@
-# Notionless Features Guide
+# Paperus Features Guide
 
 ## New Features (v1.0.1)
 

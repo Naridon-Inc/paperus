@@ -1,6 +1,6 @@
 # Security model
 
-Notionless is **end‑to‑end encrypted, zero‑account, and peer‑to‑peer**. No server
+Paperus is **end‑to‑end encrypted, zero‑account, and peer‑to‑peer**. No server
 ever holds a readable copy of your notes, your password, or your keys. This
 document describes exactly what is protected, how, and — just as importantly —
 what is *not*. (See also the per‑feature caveats `R1`–`R9` in `CLAUDE.md`.)
@@ -57,7 +57,7 @@ log would otherwise be an *append‑only* record of every keystroke — meaning 
 key‑holder could decrypt the full history, **including text that was later
 deleted**, forever.
 
-Notionless **compacts** that log (`engine.js _compactTransport`): once it grows
+Paperus **compacts** that log (`engine.js _compactTransport`): once it grows
 past a threshold it is replaced, in one atomic step, with a **single snapshot
 taken from a garbage‑collected clone of the document**. The clone has no undo
 history holding deleted content, so the snapshot encodes only what is *currently

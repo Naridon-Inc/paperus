@@ -21,13 +21,13 @@ You can also combine them: **bold with `code` inside**, *italic with ~~strikethr
 
 ## Links & Images
 
-Visit [Notionless on GitHub](https://github.com/MHASK/Notionless) for more info.
+Visit [Paperus on GitHub](https://github.com/MHASK/Paperus) for more info.
 
 Auto-linked URL: https://notionless.bucksaas.com
 
-Reference-style link: [Notionless][1]
+Reference-style link: [Paperus][1]
 
-[1]: https://github.com/MHASK/Notionless
+[1]: https://github.com/MHASK/Paperus
 
 ---
 
@@ -334,4 +334,4 @@ Long line that should wrap properly in the editor without horizontal scrolling b
 
 ---
 
-*This document demonstrates all supported markdown features in Notionless.*
+*This document demonstrates all supported markdown features in Paperus.*

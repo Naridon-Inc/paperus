@@ -1,4 +1,4 @@
-# Notionless Plugin API — FROZEN CONTRACT v1 (`apiVersion: "1"`)
+# Paperus Plugin API — FROZEN CONTRACT v1 (`apiVersion: "1"`)
 
 > Status: **FROZEN**. This document is the single source of truth every engineer
 > builds against. Method signatures, message shapes, channel names, manifest

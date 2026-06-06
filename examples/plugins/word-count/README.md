@@ -1,6 +1,6 @@
 # Word Count (example plugin)
 
-A minimal Notionless plugin that shows a live **word · char** count in the
+A minimal Paperus plugin that shows a live **word · char** count in the
 footer status bar.
 
 ## Surfaces exercised

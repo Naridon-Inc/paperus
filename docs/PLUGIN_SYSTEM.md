@@ -1,4 +1,4 @@
-# Notionless Plugin System & Integration Surface
+# Paperus Plugin System & Integration Surface
 
 > Status: **design / RFC**. This document specifies the plugin architecture before
 > implementation. It is the contract third-party authors (and AI agents) build against.
@@ -7,7 +7,7 @@
 
 1. **Anyone can extend the app** — add a block type, a slash command, a sidebar
    panel, an AI provider, or an import/export format — without forking.
-2. **Safe by default.** Notionless is local-first and **end-to-end encrypted**. A
+2. **Safe by default.** Paperus is local-first and **end-to-end encrypted**. A
    plugin must never be able to exfiltrate plaintext note content, identity keys,
    or the team root key. Untrusted plugins run **sandboxed** with explicitly
    granted capabilities.

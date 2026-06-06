@@ -1,6 +1,6 @@
-# Notionless — Product Hunt launch kit
+# Paperus — Product Hunt launch kit
 
-Everything you need to launch Notionless on Product Hunt (and Hacker News /
+Everything you need to launch Paperus on Product Hunt (and Hacker News /
 Reddit / X). Copy is written and ready to paste; swap names/links as needed.
 
 **The one-line positioning**
@@ -21,10 +21,10 @@ explanation and does the differentiation for us.
 
 | Field | Value |
 |---|---|
-| **Name** | Notionless |
+| **Name** | Paperus |
 | **Tagline** (≤60 chars) | see options below |
 | **Topics** | Open Source · Productivity · Note · Privacy · Artificial Intelligence · Developer Tools |
-| **Links** | Site `https://oss.naridon.com` · GitHub `https://github.com/Naridon-Inc/Notionless` · Download (latest release) |
+| **Links** | Site `https://oss.naridon.com` · GitHub `https://github.com/Naridon-Inc/paperus` · Download (latest release) |
 | **Pricing** | Free (and open source) |
 | **Platforms** | macOS (Windows/Linux on roadmap), iOS/Android companion |
 
@@ -41,7 +41,7 @@ explanation and does the differentiation for us.
 
 ### Description (≤260 chars)
 
-> Notionless is an open-source, local-first Notion alternative. Notes are plain
+> Paperus is an open-source, local-first Notion alternative. Notes are plain
 > Markdown on your disk; teams sync peer-to-peer, end-to-end encrypted, with no
 > account. Its Company Brain answers across your workspace using the Claude Code
 > you already run — or a fully-local model.
@@ -70,7 +70,7 @@ Notes:
   (best quality on PH) or GIF: `ffmpeg -i motion-brain.webp motion-brain.mp4`.
 - First image should be **1270×760** or similar landscape; our shots are wider, so
   they'll letterbox cleanly on the dark frame (intended).
-- The **thumbnail/logo**: the Notionless mark — a hand-drawn white 3D cube on a
+- The **thumbnail/logo**: the Paperus mark — a hand-drawn white 3D cube on a
   black rounded square (`landing/logo.svg` / `build/icon.svg`). This is the real
   app icon; don't use the old hexagon mark.
 
@@ -80,7 +80,7 @@ Notes:
 
 > Hey Product Hunt 👋 — maker here.
 >
-> I built Notionless because I wanted Notion's editor and databases without
+> I built Paperus because I wanted Notion's editor and databases without
 > handing my team's entire brain to someone else's cloud. So I made the opposite
 > trade: every note is a plain Markdown file in a folder **you** own, on your own
 > machine.
@@ -113,7 +113,7 @@ Notes:
 > **What would it take for you to trust your own team's docs to something like
 > this?**
 >
-> ⬇️ macOS download + source: https://github.com/Naridon-Inc/Notionless · site:
+> ⬇️ macOS download + source: https://github.com/Naridon-Inc/paperus · site:
 > https://oss.naridon.com
 
 ---
@@ -160,7 +160,7 @@ Notes:
 
 ### X / Twitter (thread)
 
-> 1/ Launched Notionless on Product Hunt today 🚀
+> 1/ Launched Paperus on Product Hunt today 🚀
 > An open-source, local-first Notion alternative — your notes are plain Markdown
 > on your disk, synced peer-to-peer & end-to-end encrypted. No account. No cloud.
 > [link]
@@ -177,9 +177,9 @@ Notes:
 
 ### Hacker News (Show HN)
 
-> **Show HN: Notionless – local-first Notion alternative with a Claude Code brain**
+> **Show HN: Paperus – local-first Notion alternative with a Claude Code brain**
 >
-> Notionless is an open-source (AGPL-3.0) desktop app: Notion-style editor and
+> Paperus is an open-source (AGPL-3.0) desktop app: Notion-style editor and
 > databases, but every note is a plain Markdown file on your disk. No account —
 > you create a team and share one link; edits sync peer-to-peer over WebRTC,
 > end-to-end encrypted with libsodium. The only hosted piece is a stateless
@@ -196,7 +196,7 @@ Notes:
 
 ### Reddit (r/selfhosted, r/opensource, r/privacy)
 
-> **Notionless: a local-first, open-source Notion alternative — Markdown on disk,
+> **Paperus: a local-first, open-source Notion alternative — Markdown on disk,
 > P2P encrypted sync, and an AI brain you run yourself (Claude Code / Ollama)**
 >
 > No account, no cloud database. Notes are plain `.md` files you own; teams sync
@@ -212,7 +212,7 @@ Notes:
 - [ ] Post the maker's first comment immediately (§3).
 - [ ] Line up a hunter (optional) or self-launch; have the gallery (§2) uploaded and ordered.
 - [ ] Convert `motion-brain.webp` + `motion-database.webp` → MP4 for the gallery.
-- [ ] First image = `hero.png`; thumbnail = Notionless mark on dark.
+- [ ] First image = `hero.png`; thumbnail = Paperus mark on dark.
 - [ ] Pin the GitHub repo, make sure the latest release + README are current.
 - [ ] Cross-post the X thread + Show HN within the first 1–2 hours; reply to every comment.
 - [ ] Add a "🚀 We're live on Product Hunt" banner/link to `oss.naridon.com` (optional).
