@@ -17,8 +17,8 @@ No database to set up. No accounts system to build. No cloud lock-in.
 ## TL;DR
 
 ```bash
-git clone https://github.com/Naridon-Inc/notionless.git
-cd notionless
+git clone https://github.com/Naridon-Inc/paperus.git
+cd paperus
 cp .env.selfhost.example .env
 #   edit .env → set NL_DOMAIN=docs.yourcompany.com  (and NL_TLS_EMAIL)
 docker compose -f docker-compose.selfhost.yml up -d
