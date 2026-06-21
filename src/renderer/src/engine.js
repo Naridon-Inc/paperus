@@ -410,12 +410,18 @@ export class DocumentEngine {
         window.removeEventListener('beforeunload', this._beforeUnloadHandler);
         this._beforeUnloadHandler = null;
     }
+    // Every teardown step is wrapped: a provider tearing down shared Awareness
+    // can throw deep in y-protocols ("Cannot read properties of undefined
+    // (reading 'clock')") when its meta/state maps are momentarily out of sync.
+    // That error is harmless to us but, if it escapes, it surfaces as an uncaught
+    // red banner AND aborts the rest of this teardown — leaving the NEXT doc's
+    // editor half-mounted. Isolate each step so one bad provider can't cascade.
     if (this.cloudProvider) {
-        this.cloudProvider.destroy();
+        try { this.cloudProvider.destroy(); } catch (e) { console.warn('[Engine] cloudProvider teardown:', e); }
         this.cloudProvider = null;
     }
     if (this.network) {
-        this.network.disconnect();
+        try { this.network.disconnect(); } catch (e) { console.warn('[Engine] network teardown:', e); }
         this.network = null;
     }
     if (this.transportPersistence) {
@@ -423,16 +429,17 @@ export class DocumentEngine {
         this.transportPersistence = null;
     }
     if (this.transportDoc) {
-        this.transportDoc.destroy();
+        try { this.transportDoc.destroy(); } catch (e) { console.warn('[Engine] transportDoc teardown:', e); }
         this.transportDoc = null;
     }
     if (this.undoManager) {
-        this.undoManager.destroy();
+        try { this.undoManager.destroy(); } catch (_e) { /* ignore */ }
         this.undoManager = null;
     }
-    this.presence.destroy()
-    this.persistence.destroy()
-    this.doc.destroy()
+    try { this.presence.destroy() } catch (_e) { /* ignore */ }
+    try { this.persistence.destroy() } catch (_e) { /* ignore */ }
+    try { this.awareness.destroy() } catch (_e) { /* ignore */ }
+    try { this.doc.destroy() } catch (e) { console.warn('[Engine] doc teardown:', e); }
   }
 }
 

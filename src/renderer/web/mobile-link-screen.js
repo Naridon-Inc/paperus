@@ -171,7 +171,7 @@ export async function parsePairingInput(raw) {
   }
 
   if (!creds || !creds.teamRootKey) {
-    return { creds: null, error: "That doesn't look like a Notionless pairing link." }
+    return { creds: null, error: "That doesn't look like a Paperus pairing link." }
   }
 
   // Cryptographic verification (when device-link is present): re-derive teamId
@@ -271,7 +271,7 @@ export function showLinkScreen({ onLinked, mount } = {}) {
   ])
 
   const card = el('div', { className: 'ml-card' }, [
-    el('h1', { className: 'ml-logo' }, ['Notionless']),
+    el('h1', { className: 'ml-logo' }, ['Paperus']),
     el('p', { className: 'ml-tag' }, [
       'Mobile companion — a paired leaf of your team. It stays locked until you link it from a desktop.',
     ]),

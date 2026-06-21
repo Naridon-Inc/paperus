@@ -1,5 +1,5 @@
 /*!
- * Notionless — first-party, privacy-respecting page analytics (no cookies, no
+ * Paperus — first-party, privacy-respecting page analytics (no cookies, no
  * third parties, no fingerprinting). Sends a tiny anonymous beacon to our own
  * relay so we can see pageviews, referrers (e.g. Product Hunt), and download
  * clicks. Honors Do Not Track. ~1KB, no dependencies.

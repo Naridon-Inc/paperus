@@ -16,6 +16,31 @@ function rt(key) {
 function viteEnv(key) {
   return (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) || undefined;
 }
+function lsGet(key) {
+  try {
+    return (typeof localStorage !== 'undefined' && localStorage.getItem(key)) || undefined;
+  } catch (_e) { return undefined; }
+}
+
+// A team can point the WHOLE app at THEIR OWN self-hosted server at runtime —
+// with NO rebuild and on EVERY platform, including the Electron desktop app (the
+// build-time VITE_* vars and the web-only window.__NL_CONFIG can't reach desktop
+// users). The team server is a single base URL (e.g. `https://team.acme.com`);
+// both the WebRTC signaling path (`/signaling`) and the optional always-on relay
+// path (`/yjs`) hang off it. Stored in localStorage by server-config.js so this
+// stays synchronous — providers read these getters during construction. Until a
+// team sets it, everything falls back to Naridon's free oss.naridon.com relay.
+function teamServerBase() {
+  let v = lsGet('notionless_server_url');
+  if (!v) return undefined;
+  v = String(v).trim().replace(/\/+$/, '');
+  if (!v) return undefined;
+  // Accept http(s):// or ws(s):// and normalize to a realtime-socket scheme.
+  if (/^https:\/\//i.test(v)) v = v.replace(/^https/i, 'wss');
+  else if (/^http:\/\//i.test(v)) v = v.replace(/^http/i, 'ws');
+  else if (!/^wss?:\/\//i.test(v)) v = `wss://${v}`; // bare host → assume TLS
+  return v;
+}
 // True when running as a real web app (served over http/https on a non-localhost
 // host). False in Electron (custom protocol) and on localhost dev.
 function isDeployedWeb() {
@@ -40,7 +65,7 @@ export const Config = {
   // Where teammates without the app go to install it.
   get DOWNLOAD_URL() {
     return rt('DOWNLOAD_URL') || viteEnv('VITE_DOWNLOAD_URL')
-      || 'https://github.com/Naridon-Inc/notionless/releases/latest';
+      || 'https://github.com/Naridon-Inc/paperus/releases/latest';
   },
 
   // WebRTC signaling relay. Brokers peer connections; stores nothing — it sees
@@ -48,6 +73,13 @@ export const Config = {
   // defaults to the page's own origin (/signaling), so a self-hosted bundle needs
   // no relay URL configured. p2p.js still adds the local :4444 server on localhost.
   get SIGNALING_URL() {
+    // Runtime team-server override wins on EVERY platform (incl. desktop), so a
+    // team can broker peers through their OWN relay with no rebuild. An explicit
+    // per-key override still trumps it for advanced setups.
+    const explicit = lsGet('notionless_signaling_url');
+    if (explicit) return explicit;
+    const base = teamServerBase();
+    if (base) return `${base}/signaling`;
     return rt('SIGNALING_URL') || viteEnv('VITE_SIGNALING_URL')
       || sameOriginWs('/signaling') || 'wss://oss.naridon.com/signaling';
   },
@@ -59,7 +91,14 @@ export const Config = {
   // always available even when everyone's laptop is closed. The box only ever sees
   // hashed room names and ciphertext. See docs/SELF_HOSTED_SYNC.md.
   get CLOUD_SYNC_URL() {
-    const v = rt('CLOUD_SYNC_URL') || viteEnv('VITE_CLOUD_SYNC_URL') || '';
+    // A team server exposes an always-on encrypted relay at `/yjs`, so deriving
+    // it from the same base means "connect to your team's server" also turns on
+    // 24/7 availability in one step. (p2p.js still honors the per-client
+    // `notionless_cloud_sync_disabled` opt-out, so a user can drop back to pure
+    // P2P without leaving their team's signaling relay.) Explicit env wins.
+    const explicit = rt('CLOUD_SYNC_URL') || viteEnv('VITE_CLOUD_SYNC_URL') || '';
+    const base = teamServerBase();
+    const v = explicit || (base ? `${base}/yjs` : '');
     // Allow a relative "/yjs" override to resolve against the current origin.
     if (v && v.startsWith('/')) return sameOriginWs(v) || '';
     return v;

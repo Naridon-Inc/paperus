@@ -30,7 +30,7 @@
 const MAX_TURNS = 24 // hard cap so a runaway model can never loop forever
 
 const TOOL_PROTOCOL = `
-You are building a Notionless plugin in the workspace folder "plugin/". You have a
+You are building a Paperus plugin in the workspace folder "plugin/". You have a
 small set of tools. To use a tool, reply with EXACTLY ONE fenced code block tagged
 \`tool\` containing a single JSON object, and nothing else:
 

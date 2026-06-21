@@ -21,6 +21,7 @@
  * formatting (bullets, bold/italic/code markers stripped).
  */
 import { WidgetType } from '@codemirror/view'
+import { renderInline } from './cm-inline-render'
 
 /** True if a FencedCode block's opening line declares the `columns` language. */
 export function isColumnsFence(firstLineText) {
@@ -55,14 +56,12 @@ function renderLine(line) {
   const heading = line.match(/^(#{1,6})\s+(.*)$/)
   if (heading) {
     div.className = `cm-columns-h cm-columns-h${heading[1].length}`
-    div.textContent = heading[2]
+    div.innerHTML = renderInline(heading[2])
     return div
   }
-  div.textContent = line
-    .replace(/^\s*[-*+]\s+/, '• ')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/\*([^*]+)\*/g, '$1')
+  // Render inline markdown + math; turn list markers into a bullet glyph.
+  const bullet = line.match(/^\s*[-*+]\s+(.*)$/)
+  div.innerHTML = bullet ? `• ${renderInline(bullet[1])}` : renderInline(line)
   return div
 }
 

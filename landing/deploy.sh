@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy the standalone Notionless landing page to its own Lightsail container
+# Deploy the standalone Paperus landing page to its own Lightsail container
 # service (separate from the signaling relay). Idempotent: creates the service
 # on first run, then builds → pushes → deploys on every run.
 #

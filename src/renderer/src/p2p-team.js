@@ -192,6 +192,13 @@ export class P2PTeamManager {
   }
 
   getRoster(teamId) { return this._get(teamId).roster }
+  /** The reconciled member list for a team (defensive wrapper over the roster). */
+  getRosterMembers(teamId) {
+    try {
+      const r = this.getRoster(teamId)
+      return (r && typeof r.getMembers === 'function') ? r.getMembers() : []
+    } catch (_e) { return [] }
+  }
   getKeys(teamId) { return this._get(teamId).keys }
   getName(teamId) { return this._get(teamId).name }
 

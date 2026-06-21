@@ -7,9 +7,9 @@
 // as a JS module so the renderer can import it without a filesystem read. Keep it
 // in sync with those files when the contract changes (and bump apiVersion).
 
-export const PLUGIN_AUTHOR_GUIDE = `# Notionless Plugin API — author guide (apiVersion "1")
+export const PLUGIN_AUTHOR_GUIDE = `# Paperus Plugin API — author guide (apiVersion "1")
 
-A Notionless plugin is a folder with a plugin.json manifest and an ESM index.js.
+A Paperus plugin is a folder with a plugin.json manifest and an ESM index.js.
 It runs SANDBOXED (an iframe with a Worker): no window, no DOM, no require, no fetch.
 The plugin talks to the host only through the \`ctx\` object passed to \`activate(ctx)\`.
 Everything across the boundary is JSON-serializable. Callbacks you pass in (onToken,

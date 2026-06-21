@@ -1,0 +1,719 @@
+/*
+ * island.css — the ONLY stylesheet that pulls Tailwind in. Because
+ * `corePlugins.preflight` is off (no global reset) and `important: true` is set,
+ * these directives emit global `!important` utilities. The vanilla app uses only
+ * semantic, compound class names so nothing collides; making utilities global
+ * (rather than `#react-root`-scoped) is what lets Medusa's body-portalled
+ * overlays — which live OUTSIDE the island — actually receive their styling.
+ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* preflight is disabled globally, so re-supply box-sizing for island content
+ * (Medusa components assume border-box) AND for the body-portalled overlays,
+ * which live outside the island but are equally Medusa-rendered. */
+#react-root.medusa-island,
+.medusa-island *,
+.medusa-island *::before,
+.medusa-island *::after,
+[role='dialog'],
+[role='dialog'] *,
+[role='dialog'] *::before,
+[role='dialog'] *::after,
+[data-radix-popper-content-wrapper],
+[data-radix-popper-content-wrapper] *,
+[data-radix-popper-content-wrapper] *::before,
+[data-radix-popper-content-wrapper] *::after {
+  box-sizing: border-box;
+}
+
+/* ── overlay stacking net ─────────────────────────────────────────────────────
+ * Medusa/Radix overlays (FocusModal, Drawer, Select, DropdownMenu, Tooltip,
+ * Popover) portal to <body>, OUTSIDE the island, and Medusa gives them no
+ * z-index (in the Medusa admin nothing competes). The vanilla app, however, has
+ * stacking contexts up to z-index ~100001 (command palette, dialogs) that would
+ * paint OVER a z:auto overlay. Lift every Medusa/Radix overlay above all of them.
+ * These selectors are Medusa/Radix-specific — the vanilla app uses none of them
+ * (audited), so this never touches the vanilla UI. */
+[data-radix-popper-content-wrapper], /* Select · DropdownMenu · Tooltip · Popover */
+[role='dialog'],                      /* FocusModal · Drawer · Dialog content      */
+.bg-ui-bg-overlay {                   /* every Medusa overlay backdrop             */
+  z-index: 2000000 !important;
+}
+
+/* ── form-control normalization (was: Tailwind preflight) ─────────────────────
+ * Tailwind preflight is disabled (corePlugins.preflight=false) so it can't bleed
+ * into the vanilla app — but Medusa's Checkbox/Switch/Select/Input render native
+ * <button>/<input> elements that RELY on preflight flattening their OS chrome.
+ * Without it, macOS draws native bezels (grey `outset` border + `appearance:auto`)
+ * so e.g. an unchecked checkbox looks like a raw HTML control. Re-supply exactly
+ * the subset preflight provides, scoped to the island via :where() at ZERO added
+ * specificity, so Tailwind's `!important` utilities and our `.pp-*` classes still
+ * win and elements with an explicit border/background are never touched. */
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) *,
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) *::before,
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) *::after,
+[role='dialog'],
+[data-radix-popper-content-wrapper] {
+  border-width: 0;
+  border-style: solid;
+  border-color: var(--border-base, #e4e4e7);
+}
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) button,
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) [type='button'],
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) [type='reset'],
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) [type='submit'] {
+  -webkit-appearance: button;
+  appearance: button;
+  background-color: transparent;
+  background-image: none;
+}
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) button,
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) select { text-transform: none; }
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) button,
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) input,
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) optgroup,
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) select,
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) textarea {
+  font-family: inherit;
+  font-size: 100%;
+  font-weight: inherit;
+  line-height: inherit;
+  color: inherit;
+  margin: 0;
+  padding: 0;
+}
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) button,
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) [role='button'] { cursor: pointer; }
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) :disabled { cursor: default; }
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) [type='checkbox'],
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) [type='radio'] {
+  -webkit-appearance: none;
+  appearance: none;
+  padding: 0;
+}
+/* Radix Checkbox/Switch/Radio render <button role="…">, not <input>; flatten
+ * their native chrome explicitly so no OS bezel survives the appearance:button
+ * above (belt-and-suspenders for the unchecked-checkbox raw-render bug). */
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) [role='checkbox'],
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) [role='radio'],
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) [role='switch'] {
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: transparent;
+}
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) input::placeholder,
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) textarea::placeholder {
+  opacity: 1;
+  color: var(--fg-muted, #9ca3af);
+}
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) img,
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) svg,
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) video,
+:where(.medusa-island, [role='dialog'], [data-radix-popper-content-wrapper]) canvas { display: block; vertical-align: middle; }
+
+#react-root.medusa-island {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  /* inherit the app font so islands feel native */
+  font-family: var(--ui-font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * Paperus surface design system
+ *
+ * Hand-tuned classes layered ON TOP of Medusa primitives to give the new
+ * full-area surfaces (Tasks / Calendar / Inbox / Email) a premium, cohesive
+ * feel that plain utility soup can't reach. Everything keys off Medusa's theme
+ * CSS variables (--bg-*, --fg-*, --border-*) so light + dark both work for free.
+ *
+ * NOTE on specificity: Tailwind utilities are emitted `!important` (important:
+ * '#react-root'), so these `.pp-*` classes deliberately AVOID sharing elements
+ * with conflicting utilities, and fully self-specify (appearance/font/border/
+ * background) so vanilla global `button{}`/`*{}` rules can never bleed in.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+.medusa-island,
+[role='dialog'],
+[data-radix-popper-content-wrapper] {
+  --pp-radius: 12px;
+  --pp-radius-sm: 8px;
+  --pp-shadow-soft: 0 1px 2px rgba(17, 24, 39, .05), 0 1px 1px rgba(17, 24, 39, .03);
+  --pp-shadow-card: 0 1px 3px rgba(17, 24, 39, .05), 0 8px 24px -12px rgba(17, 24, 39, .12);
+  --pp-accent: var(--bg-interactive, #3b82f6);
+  --pp-line: color-mix(in srgb, var(--border-base, #e4e4e7) 72%, transparent);
+  --pp-line-soft: color-mix(in srgb, var(--border-base, #e4e4e7) 45%, transparent);
+  --pp-hover: color-mix(in srgb, var(--bg-base-hover, var(--bg-subtle, #fafafa)) 60%, var(--bg-base, #fff));
+}
+
+/* surface shell ──────────────────────────────────────────────────────────── */
+.pp-surface {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: var(--bg-subtle, #fafafa);
+  color: var(--fg-base, #18181b);
+}
+.pp-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 16px 24px;
+  background: var(--bg-base, #fff);
+  border-bottom: 1px solid var(--pp-line);
+  flex: none;
+}
+.pp-title {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.15;
+  font-weight: 640;
+  letter-spacing: -.018em;
+  color: var(--fg-base, #18181b);
+  font-variant-numeric: tabular-nums;
+}
+.pp-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--fg-muted, #71717a);
+}
+.pp-spacer { margin-left: auto; }
+.pp-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 22px 24px 32px;
+}
+.pp-body--pad-lg { padding: 26px 28px 40px; }
+
+/* segmented control (Month / Agenda etc.) — for non-Medusa cases ─────────── */
+.pp-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--bg-subtle, #f4f4f5);
+  border: 1px solid var(--pp-line-soft);
+}
+.pp-seg-btn {
+  appearance: none; -webkit-appearance: none;
+  font-family: inherit; cursor: pointer;
+  margin: 0; border: 0;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12.5px; font-weight: 550;
+  color: var(--fg-muted, #71717a);
+  background: transparent;
+  transition: color .12s ease, background .12s ease, box-shadow .12s ease;
+}
+.pp-seg-btn:hover { color: var(--fg-subtle, #52525b); }
+.pp-seg-btn[aria-selected="true"], .pp-seg-btn.is-active {
+  color: var(--fg-base, #18181b);
+  background: var(--bg-base, #fff);
+  box-shadow: var(--pp-shadow-soft);
+}
+
+/* card ───────────────────────────────────────────────────────────────────── */
+.pp-card {
+  background: var(--bg-base, #fff);
+  border: 1px solid var(--pp-line);
+  border-radius: var(--pp-radius);
+  box-shadow: var(--pp-shadow-card);
+  overflow: hidden;
+}
+
+/* generic list rows (agenda, tasks, inbox) ───────────────────────────────── */
+.pp-list { display: flex; flex-direction: column; }
+.pp-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--pp-line-soft);
+  transition: background .12s ease;
+}
+.pp-row:last-child { border-bottom: 0; }
+.pp-row:hover { background: var(--pp-hover); }
+
+/* empty state ─────────────────────────────────────────────────────────────── */
+.pp-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; text-align: center;
+  padding: 72px 24px;
+  color: var(--fg-muted, #71717a);
+}
+.pp-empty-icon {
+  display: grid; place-items: center;
+  width: 46px; height: 46px; border-radius: 13px;
+  background: color-mix(in srgb, var(--pp-accent) 9%, var(--bg-base, #fff));
+  color: var(--pp-accent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pp-accent) 16%, transparent);
+}
+
+/* ── Calendar ──────────────────────────────────────────────────────────────── */
+/* The month card fills the surface (no dead space below) and the day-rows
+   stretch to share that height, scrolling only when the window is too short. */
+.pp-body--cal { display: flex; flex-direction: column; overflow: hidden; padding: 14px 18px 18px; }
+.pp-cal {
+  display: flex; flex-direction: column;
+  flex: 1; min-height: 0;
+  box-shadow: var(--pp-shadow-soft);
+}
+.pp-cal-weekhead {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  background: color-mix(in srgb, var(--bg-subtle, #fafafa) 70%, var(--bg-base, #fff));
+  border-bottom: 1px solid var(--pp-line);
+}
+.pp-cal-weekhead > div {
+  padding: 7px 12px;
+  font-size: 11px; font-weight: 600; letter-spacing: .055em; text-transform: uppercase;
+  color: var(--fg-muted, #71717a);
+}
+.pp-cal-grid {
+  flex: 1; min-height: 0; overflow-y: auto;
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  grid-auto-rows: minmax(72px, 1fr);
+}
+.pp-cal-cell {
+  position: relative;
+  min-height: 0; overflow: hidden;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 6px 7px 8px;
+  background: var(--bg-base, #fff);
+  border-right: 1px solid var(--pp-line-soft);
+  border-bottom: 1px solid var(--pp-line-soft);
+  transition: background .12s ease;
+}
+.pp-cal-cell:nth-child(7n) { border-right: 0; }
+.pp-cal-cell:hover { background: var(--pp-hover); }
+.pp-cal-cell--out { background: color-mix(in srgb, var(--bg-subtle, #fafafa) 52%, var(--bg-base, #fff)); }
+.pp-cal-cell--today { background: color-mix(in srgb, var(--pp-accent) 6%, var(--bg-base, #fff)); }
+.pp-cal-cell--today:hover { background: color-mix(in srgb, var(--pp-accent) 10%, var(--bg-base, #fff)); }
+.pp-cal-hit {
+  position: absolute; inset: 0; z-index: 0;
+  appearance: none; -webkit-appearance: none;
+  margin: 0; border: 0; padding: 0; background: transparent;
+  cursor: pointer;
+}
+.pp-cal-cellhead { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; pointer-events: none; }
+.pp-cal-daynum {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 23px; height: 23px; padding: 0 6px;
+  font-size: 12.5px; font-weight: 550; line-height: 1;
+  color: var(--fg-subtle, #52525b);
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+.pp-cal-cell--out .pp-cal-daynum { color: color-mix(in srgb, var(--fg-muted, #71717a) 62%, transparent); font-weight: 500; }
+.pp-cal-cell--today .pp-cal-daynum {
+  background: var(--pp-accent); color: #fff; font-weight: 680;
+  box-shadow: 0 1px 5px color-mix(in srgb, var(--pp-accent) 42%, transparent);
+}
+.pp-cal-add {
+  display: grid; place-items: center;
+  width: 19px; height: 19px; border-radius: 6px;
+  color: var(--fg-muted, #71717a);
+  background: var(--bg-base, #fff);
+  box-shadow: inset 0 0 0 1px var(--pp-line);
+  opacity: 0; transform: scale(.85); pointer-events: none;
+  transition: opacity .12s ease, transform .12s ease;
+}
+.pp-cal-cell:hover .pp-cal-add { opacity: 1; transform: scale(1); }
+.pp-cal-add svg { width: 13px; height: 13px; }
+.pp-cal-pills { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 3px; }
+
+/* event pill ──────────────────────────────────────────────────────────────── */
+.pp-pill {
+  appearance: none; -webkit-appearance: none;
+  font-family: inherit; cursor: pointer; text-align: left;
+  margin: 0; width: 100%;
+  display: flex; align-items: center; gap: 6px;
+  padding: 2px 7px;
+  border-radius: 7px;
+  font-size: 11.5px; line-height: 1.4; font-weight: 510;
+  color: var(--fg-subtle, #52525b);
+  background: color-mix(in srgb, var(--bg-subtle, #f4f4f5) 70%, var(--bg-base, #fff));
+  border: 1px solid var(--pp-line-soft);
+  transition: background .12s ease, border-color .12s ease, transform .04s ease;
+}
+.pp-pill:hover { background: var(--bg-field, #f4f4f5); border-color: var(--pp-line); }
+.pp-pill:active { transform: translateY(.5px); }
+.pp-pill__dot { width: 6px; height: 6px; border-radius: 999px; flex: none; background: var(--fg-muted, #a1a1aa); }
+.pp-pill__ico { flex: none; display: grid; place-items: center; color: var(--pp-accent); }
+.pp-pill__ico svg { width: 12px; height: 12px; }
+.pp-pill__label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.pp-pill--remind {
+  background: color-mix(in srgb, var(--pp-accent) 9%, var(--bg-base, #fff));
+  border-color: color-mix(in srgb, var(--pp-accent) 22%, transparent);
+}
+.pp-pill--remind .pp-pill__label { color: color-mix(in srgb, var(--fg-base, #18181b) 62%, var(--pp-accent)); }
+.pp-pill--done { background: color-mix(in srgb, var(--bg-subtle, #f4f4f5) 55%, var(--bg-base, #fff)); }
+.pp-pill--done .pp-pill__label { text-decoration: line-through; color: var(--fg-muted, #a1a1aa); }
+.pp-pill--done .pp-pill__dot { background: var(--tag-green-icon, #16a34a); }
+.pp-pill--overdue .pp-pill__dot { background: var(--tag-red-icon, #dc2626); }
+.pp-pill--more {
+  background: transparent; border-color: transparent;
+  color: var(--fg-muted, #71717a); font-weight: 550; padding-left: 8px;
+}
+.pp-pill--more:hover { background: transparent; color: var(--fg-subtle, #52525b); }
+
+/* misc text helpers ───────────────────────────────────────────────────────── */
+.pp-kbd {
+  font: 500 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 2px 5px; border-radius: 5px;
+  background: var(--bg-subtle, #f4f4f5);
+  border: 1px solid var(--pp-line);
+  color: var(--fg-subtle, #52525b);
+}
+
+/* ── section header (bucket title + count) ─────────────────────────────────── */
+.pp-sec-head { display: flex; align-items: center; gap: 8px; padding: 2px 2px 1px; }
+.pp-sec-title { font-size: 13px; font-weight: 650; letter-spacing: -.012em; color: var(--fg-base, #18181b); }
+.pp-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 19px; height: 18px; padding: 0 6px;
+  border-radius: 999px; font-size: 11px; font-weight: 600; line-height: 1;
+  background: var(--bg-subtle, #f4f4f5); color: var(--fg-muted, #71717a);
+  border: 1px solid var(--pp-line-soft); font-variant-numeric: tabular-nums;
+}
+.pp-count--red   { background: color-mix(in srgb, #dc2626 11%, var(--bg-base, #fff)); color: #b91c1c; border-color: color-mix(in srgb, #dc2626 22%, transparent); }
+.pp-count--amber { background: color-mix(in srgb, #f59e0b 14%, var(--bg-base, #fff)); color: #b45309; border-color: color-mix(in srgb, #f59e0b 26%, transparent); }
+.pp-count--green { background: color-mix(in srgb, #16a34a 11%, var(--bg-base, #fff)); color: #15803d; border-color: color-mix(in srgb, #16a34a 22%, transparent); }
+.pp-count--blue  { background: color-mix(in srgb, var(--pp-accent) 12%, var(--bg-base, #fff)); color: color-mix(in srgb, var(--pp-accent) 72%, #000); border-color: color-mix(in srgb, var(--pp-accent) 24%, transparent); }
+
+/* ── meta chip (note / date / assignee) ────────────────────────────────────── */
+.pp-chip {
+  appearance: none; -webkit-appearance: none; font-family: inherit;
+  display: inline-flex; align-items: center; gap: 4px; max-width: 210px;
+  margin: 0; padding: 1px 7px; border-radius: 6px;
+  font-size: 11.5px; font-weight: 510; line-height: 1.55;
+  background: var(--bg-subtle, #f4f4f5); color: var(--fg-subtle, #52525b);
+  border: 1px solid var(--pp-line-soft);
+}
+.pp-chip svg { width: 12px; height: 12px; opacity: .75; flex: none; }
+.pp-chip__label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pp-chip--btn { cursor: pointer; transition: background .12s ease, border-color .12s ease; }
+.pp-chip--btn:hover { background: var(--bg-field, #f4f4f5); border-color: var(--pp-line); }
+.pp-chip--red    { background: color-mix(in srgb, #dc2626 10%, var(--bg-base, #fff)); color: #b91c1c; border-color: color-mix(in srgb, #dc2626 20%, transparent); }
+.pp-chip--amber  { background: color-mix(in srgb, #f59e0b 12%, var(--bg-base, #fff)); color: #b45309; border-color: color-mix(in srgb, #f59e0b 24%, transparent); }
+.pp-chip--accent { background: color-mix(in srgb, var(--pp-accent) 10%, var(--bg-base, #fff)); color: color-mix(in srgb, var(--pp-accent) 70%, #000); border-color: color-mix(in srgb, var(--pp-accent) 22%, transparent); }
+
+/* ── avatar ─────────────────────────────────────────────────────────────────── */
+.pp-avatar {
+  display: grid; place-items: center; flex: none;
+  width: 32px; height: 32px; border-radius: 999px;
+  font-size: 12px; font-weight: 650; color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .2), 0 1px 2px rgba(17, 24, 39, .14);
+}
+.pp-avatar--sq { border-radius: 9px; }
+.pp-avatar--sm { width: 26px; height: 26px; font-size: 11px; }
+
+/* ── bare icon button (toolbars) ───────────────────────────────────────────── */
+.pp-iconbtn {
+  appearance: none; -webkit-appearance: none; font-family: inherit; cursor: pointer;
+  display: inline-grid; place-items: center; margin: 0;
+  width: 30px; height: 30px; border-radius: 8px;
+  background: transparent; border: 0; color: var(--fg-muted, #71717a);
+  transition: background .12s ease, color .12s ease;
+}
+.pp-iconbtn:hover { background: var(--pp-hover); color: var(--fg-base, #18181b); }
+.pp-iconbtn svg { width: 16px; height: 16px; }
+
+/* ── text input / field ────────────────────────────────────────────────────── */
+.pp-field {
+  appearance: none; -webkit-appearance: none; font-family: inherit;
+  width: 100%; margin: 0; padding: 8px 11px;
+  font-size: 13px; line-height: 1.4; color: var(--fg-base, #18181b);
+  background: var(--bg-field, #fafafa);
+  border: 1px solid var(--pp-line); border-radius: 9px;
+  transition: border-color .12s ease, box-shadow .12s ease, background .12s ease;
+}
+.pp-field::placeholder { color: var(--fg-muted, #a1a1aa); }
+.pp-field:focus { outline: none; background: var(--bg-base, #fff); border-color: color-mix(in srgb, var(--pp-accent) 55%, var(--pp-line)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--pp-accent) 16%, transparent); }
+.pp-label { display: block; font-size: 12px; font-weight: 600; color: var(--fg-subtle, #52525b); margin-bottom: 6px; }
+
+/* ═══ Inbox ═════════════════════════════════════════════════════════════════ */
+.pp-inbox-item {
+  position: relative; display: flex; align-items: flex-start; gap: 12px;
+  padding: 13px 16px; border-bottom: 1px solid var(--pp-line-soft);
+  transition: background .12s ease;
+}
+.pp-inbox-item:last-child { border-bottom: 0; }
+.pp-inbox-item:hover { background: var(--pp-hover); }
+.pp-inbox-item--click { cursor: pointer; }
+.pp-inbox-item--unread { box-shadow: inset 2.5px 0 0 var(--pp-accent); }
+.pp-inbox-ico {
+  display: grid; place-items: center; flex: none;
+  width: 34px; height: 34px; border-radius: 10px;
+  background: var(--bg-subtle, #f4f4f5); color: var(--fg-subtle, #52525b);
+  box-shadow: inset 0 0 0 1px var(--pp-line-soft);
+}
+.pp-inbox-ico svg { width: 16px; height: 16px; }
+.pp-inbox-ico--share   { background: color-mix(in srgb, var(--pp-accent) 12%, var(--bg-base, #fff)); color: color-mix(in srgb, var(--pp-accent) 78%, #000); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pp-accent) 22%, transparent); }
+.pp-inbox-ico--invite  { background: color-mix(in srgb, #16a34a 12%, var(--bg-base, #fff)); color: #15803d; box-shadow: inset 0 0 0 1px color-mix(in srgb, #16a34a 22%, transparent); }
+.pp-inbox-title { font-size: 13.5px; font-weight: 560; color: var(--fg-base, #18181b); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pp-inbox-item--unread .pp-inbox-title { font-weight: 680; }
+.pp-inbox-sub { font-size: 12px; color: var(--fg-subtle, #52525b); margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pp-inbox-time { font-size: 11.5px; color: var(--fg-muted, #a1a1aa); white-space: nowrap; flex: none; font-variant-numeric: tabular-nums; }
+
+/* ═══ Email — one sidebar + split: fixed list column | persistent reading pane ═ */
+.pp-mail { display: flex; min-height: 0; flex: 1; position: relative; }
+/* one-sidebar layout: accounts/folders live in the MAIN app sidebar, so the
+   surface is a 2-pane split — a fixed-width message list beside a persistent
+   reading pane (no popover). */
+.pp-mail--split .pp-mail-listcol { flex: 0 0 clamp(300px, 32%, 440px); border-right: 1px solid var(--pp-line); }
+.pp-mail--split .pp-mail-read { flex: 1; min-width: 0; }
+.pp-mail-empty {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px;
+  align-items: center; justify-content: center; text-align: center;
+  padding: 24px; color: var(--fg-muted, #71717a); font-size: 13.5px;
+  background: var(--bg-base, #fff);
+}
+.pp-mail-side {
+  width: 248px; flex: none; display: flex; flex-direction: column; min-height: 0;
+  border-right: 1px solid var(--pp-line); background: var(--bg-subtle, #fafafa);
+}
+/* the list is now the main area (fills all width left of the peek) */
+.pp-mail-listcol {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0;
+  background: var(--bg-base, #fff);
+}
+.pp-mail-read { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; background: var(--bg-base, #fff); }
+
+/* Message opens as a floating right-docked popover pane over a dimmed list. */
+.pp-mail-peek-scrim {
+  position: absolute; inset: 0; z-index: 30;
+  background: color-mix(in srgb, #0b0b0c 16%, transparent);
+  animation: pp-mail-fade .12s ease;
+}
+.pp-mail-peek {
+  position: absolute; top: 12px; right: 12px; bottom: 12px; z-index: 31;
+  width: min(760px, 66%);
+  display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+  background: var(--bg-base, #fff);
+  border: 1px solid var(--pp-line); border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(0,0,0,.22), 0 6px 16px rgba(0,0,0,.08);
+  animation: pp-mail-peek-in .2s cubic-bezier(.32,.72,0,1);
+}
+.pp-mail-peek .pp-mail-read { background: var(--bg-base, #fff); border-radius: 14px; }
+.pp-mail-peek .pp-read-head { border-radius: 14px 14px 0 0; }
+@keyframes pp-mail-fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes pp-mail-peek-in { from { transform: translateX(22px); opacity: .3 } to { transform: none; opacity: 1 } }
+
+/* date-group header inside the list */
+.pp-msg-group {
+  display: flex; align-items: center; gap: 8px;
+  padding: 16px 15px 6px; font-size: 11px; font-weight: 650;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--fg-muted, #71717a);
+  background: var(--bg-base, #fff);
+}
+.pp-msg-group::after { content: ""; flex: 1; height: 1px; background: var(--pp-line-soft); }
+
+/* rail regions: optional account switcher (multi only), scrollable folders,
+   pinned footer actions */
+.pp-mail-accts { padding: 8px 0 2px; display: flex; flex-direction: column; gap: 1px; }
+.pp-mail-folders { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 0 8px; }
+.pp-mail-side-foot { flex: none; border-top: 1px solid var(--pp-line); padding: 6px; display: flex; flex-direction: column; gap: 1px; }
+
+/* sidebar groups + items */
+.pp-side-sec { padding: 14px 12px 4px; font-size: 11px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-muted, #71717a); }
+.pp-side-item {
+  appearance: none; -webkit-appearance: none; font-family: inherit; cursor: pointer; text-align: left;
+  display: flex; align-items: center; gap: 9px; width: calc(100% - 12px);
+  margin: 1px 6px; padding: 7px 9px; border-radius: 8px;
+  background: transparent; border: 0; color: var(--fg-subtle, #52525b);
+  font-size: 13px; font-weight: 500; transition: background .12s ease, color .12s ease;
+}
+.pp-side-item:hover { background: var(--pp-hover); color: var(--fg-base, #18181b); }
+/* active = one calm accent cue: faint tint + accent icon + strong neutral text
+   (not the old blue-fill + blue-text, which read as "too much blue"). */
+.pp-side-item--active { background: color-mix(in srgb, var(--pp-accent) 8%, transparent); color: var(--fg-base, #18181b); font-weight: 600; }
+.pp-side-item svg { width: 16px; height: 16px; flex: none; opacity: .8; }
+.pp-side-item--active svg { color: var(--pp-accent); opacity: 1; }
+.pp-side-item__label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pp-side-item__count { font-size: 11.5px; font-weight: 600; color: var(--fg-muted, #a1a1aa); font-variant-numeric: tabular-nums; }
+.pp-side-item--active .pp-side-item__count { color: var(--fg-subtle, #52525b); }
+
+/* message rows */
+.pp-msg {
+  position: relative; display: flex; gap: 11px; padding: 11px 15px 12px;
+  border-bottom: 1px solid var(--pp-line-soft); cursor: pointer;
+  transition: background .1s ease;
+}
+.pp-msg:hover { background: var(--pp-hover); }
+.pp-msg--active { background: color-mix(in srgb, var(--pp-accent) 8%, var(--bg-base, #fff)); box-shadow: inset 2.5px 0 0 var(--pp-accent); }
+.pp-msg-lead { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: none; padding-top: 2px; }
+.pp-msg-unread-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--pp-accent); }
+.pp-msg-body { min-width: 0; flex: 1; }
+.pp-msg-row1 { display: flex; align-items: baseline; gap: 8px; }
+/* per-account colour dot, shown only in the unified "All inboxes" view */
+.pp-msg-acct { width: 7px; height: 7px; border-radius: 50%; flex: none; align-self: center; }
+.pp-msg-from { font-size: 13px; color: var(--fg-base, #18181b); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.pp-msg-time { font-size: 11.5px; color: var(--fg-muted, #a1a1aa); white-space: nowrap; flex: none; font-variant-numeric: tabular-nums; }
+.pp-msg-subject { font-size: 12.5px; color: var(--fg-subtle, #52525b); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pp-msg-snippet { font-size: 12px; color: var(--fg-muted, #a1a1aa); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pp-msg--unread .pp-msg-from, .pp-msg--unread .pp-msg-subject { font-weight: 680; color: var(--fg-base, #18181b); }
+
+/* reading pane */
+.pp-read-head { padding: 20px 26px 16px; border-bottom: 1px solid var(--pp-line); background: var(--bg-base, #fff); flex: none; }
+.pp-read-subject { font-size: 18px; font-weight: 660; letter-spacing: -.015em; color: var(--fg-base, #18181b); line-height: 1.3; }
+.pp-read-meta { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.pp-read-body { flex: 1; min-height: 0; overflow-y: auto; padding: 22px 26px 40px; }
+.pp-read-card { max-width: 760px; margin: 0 auto; background: var(--bg-base, #fff); border: 1px solid var(--pp-line); border-radius: var(--pp-radius); box-shadow: var(--pp-shadow-soft); overflow: hidden; }
+
+/* ═══ Account wizard (email empty-state, fixed spacious layout) ══════════════ */
+.pp-wizard { width: 100%; max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+.pp-wizard-head { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.pp-wizard-mark { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 15px; background: color-mix(in srgb, var(--pp-accent) 11%, var(--bg-base, #fff)); color: var(--pp-accent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pp-accent) 18%, transparent); }
+.pp-wizard-mark svg { width: 24px; height: 24px; }
+.pp-wizard-title { font-size: 19px; font-weight: 660; letter-spacing: -.018em; color: var(--fg-base, #18181b); }
+.pp-wizard-sub { font-size: 13.5px; color: var(--fg-subtle, #52525b); max-width: 420px; }
+.pp-provider-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.pp-provider {
+  appearance: none; -webkit-appearance: none; font-family: inherit; cursor: pointer;
+  display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 11px;
+  padding: 11px 12px; border-radius: var(--pp-radius-sm); text-align: left;
+  background: var(--bg-base, #fff); border: 1px solid var(--pp-line); color: var(--fg-base, #18181b);
+  transition: border-color .12s ease, box-shadow .12s ease, transform .04s ease, background .12s ease;
+}
+.pp-provider:hover { border-color: color-mix(in srgb, var(--pp-accent) 45%, var(--pp-line)); box-shadow: var(--pp-shadow-soft); }
+.pp-provider--active { border-color: var(--pp-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--pp-accent) 16%, transparent); }
+.pp-provider:active { transform: translateY(.5px); }
+.pp-provider-logo {
+  flex: none; display: grid; place-items: center; width: 34px; height: 34px;
+  border-radius: 9px; background: var(--bg-base, #fff); box-shadow: inset 0 0 0 1px var(--pp-line-soft);
+}
+.pp-provider-logo svg { display: block; width: auto; height: auto; max-width: 22px; max-height: 20px; }
+.pp-provider-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.pp-provider-name { font-size: 13.5px; font-weight: 600; line-height: 1.25; color: var(--fg-base, #18181b); }
+.pp-provider-host { font-size: 11.5px; line-height: 1.3; color: var(--fg-muted, #71717a); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pp-provider-check { flex: none; margin-left: auto; display: grid; place-items: center; width: 18px; height: 18px; color: var(--pp-accent); }
+.pp-provider-check svg { width: 17px; height: 17px; }
+.pp-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+.pp-form-grid .pp-col-2 { grid-column: 1 / -1; }
+
+/* Account wizard — step layout + helpers (Medusa-component rewrite) ─────────── */
+.pp-wizard-step { display: flex; flex-direction: column; gap: 18px; width: 100%; max-width: 520px; margin-inline: auto; }
+.pp-muted { color: var(--fg-muted, #71717a) !important; }
+.pp-field-error { color: var(--tag-red-text, #e11d48) !important; }
+.pp-inline-link {
+  appearance: none; background: none; border: 0; padding: 0; margin-top: 8px; cursor: pointer;
+  display: flex; width: fit-content; align-items: center; gap: 4px;
+  font-size: 12px; font-weight: 600; color: var(--pp-accent);
+}
+.pp-inline-link svg { width: 13px; height: 13px; }
+.pp-inline-link:hover { text-decoration: underline; }
+.pp-advanced-toggle { align-self: flex-start; }
+.pp-advanced-panel {
+  border: 1px solid var(--pp-line); border-radius: var(--pp-radius-sm);
+  background: color-mix(in srgb, var(--bg-subtle, #fafafa) 55%, var(--bg-base, #fff));
+  padding: 14px;
+}
+.pp-port-row { display: flex; gap: 12px; align-items: flex-end; }
+.pp-summary {
+  border: 1px solid var(--pp-line); border-radius: var(--pp-radius-sm);
+  background: color-mix(in srgb, var(--bg-subtle, #fafafa) 55%, var(--bg-base, #fff));
+  overflow: hidden;
+}
+.pp-summary-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 9px 13px; border-bottom: 1px solid var(--pp-line-soft);
+}
+.pp-summary-row--last { border-bottom: 0; }
+.pp-summary-val { font-size: 13px; font-weight: 550; color: var(--fg-base, #18181b); text-align: right; word-break: break-all; }
+.pp-summary-val--mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 500; font-size: 12.5px; }
+
+/* shared wizard step helpers (FocusModal + ProgressTabs create-flows) ──────── */
+.pp-wizard-eyebrow { font-size: 11px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--pp-accent); }
+.pp-wizard-fields { margin-top: 20px; display: flex; flex-direction: column; gap: 14px; }
+.pp-fieldrow { display: flex; flex-direction: column; gap: 6px; }
+.pp-wizard-toggle {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 11px 13px; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--pp-line);
+  background: color-mix(in srgb, var(--bg-subtle, #fafafa) 60%, var(--bg-base, #fff));
+}
+.pp-wizard-summary {
+  display: flex; align-items: center; gap: 11px;
+  padding: 12px 14px; border-radius: 11px;
+  background: color-mix(in srgb, var(--pp-accent) 7%, var(--bg-base, #fff));
+  border: 1px solid color-mix(in srgb, var(--pp-accent) 18%, transparent);
+}
+.pp-wizard-summary__ico {
+  display: grid; place-items: center; flex: none;
+  width: 34px; height: 34px; border-radius: 9px;
+  background: var(--bg-base, #fff); color: var(--pp-accent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pp-accent) 20%, transparent);
+}
+.pp-wizard-summary__ico svg { width: 17px; height: 17px; }
+.pp-wizard-summary__title { font-size: 13.5px; font-weight: 620; color: var(--fg-base, #18181b); }
+.pp-wizard-summary__sub { font-size: 12px; color: var(--fg-subtle, #52525b); margin-top: 1px; }
+.pp-hint { font-size: 12px; color: var(--fg-muted, #71717a); line-height: 1.5; }
+.pp-note {
+  display: flex; gap: 9px; padding: 11px 13px; border-radius: 10px;
+  background: color-mix(in srgb, var(--pp-accent) 6%, var(--bg-base, #fff));
+  border: 1px solid color-mix(in srgb, var(--pp-accent) 16%, transparent);
+  font-size: 12.5px; color: var(--fg-subtle, #52525b); line-height: 1.5;
+}
+.pp-note svg { width: 16px; height: 16px; flex: none; color: var(--pp-accent); margin-top: 1px; }
+
+/* utility: thin divider */
+.pp-hr { height: 1px; background: var(--pp-line); border: 0; margin: 0; }
+
+/* ── external (CalDAV) calendar additions ──────────────────────────────────── */
+/* External-event pill: tinted with its calendar's own color (set inline). The
+   base .pp-pill handles layout; we only soften the label so the dot/color reads
+   as the calendar's accent. */
+.pp-pill--ext { font-weight: 520; }
+.pp-pill--ext .pp-pill__label { color: var(--fg-base, #18181b); }
+.pp-pill--ext:hover { filter: brightness(0.99); }
+
+/* Disabled provider card (e.g. Google "coming soon") in the connect wizard. */
+.pp-provider--disabled {
+  cursor: not-allowed; opacity: .55;
+  background: color-mix(in srgb, var(--bg-subtle, #fafafa) 60%, var(--bg-base, #fff));
+}
+.pp-provider--disabled:hover { border-color: var(--pp-line); box-shadow: none; transform: none; }
+.pp-provider-soon { flex: none; margin-left: auto; }
+
+/* Read-only event peek (clicking an external-event pill). Mirrors .pp-mail-peek
+   but smaller + right-docked inside the calendar surface. */
+.pp-evpeek-scrim {
+  position: absolute; inset: 0; z-index: 30;
+  background: color-mix(in srgb, #0b0b0c 14%, transparent);
+  animation: pp-mail-fade .12s ease;
+}
+.pp-evpeek {
+  position: absolute; top: 14px; right: 14px; z-index: 31;
+  width: min(360px, 84%);
+  display: flex; flex-direction: column;
+  background: var(--bg-base, #fff);
+  border: 1px solid var(--pp-line); border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(0,0,0,.20), 0 6px 16px rgba(0,0,0,.08);
+  animation: pp-mail-peek-in .2s cubic-bezier(.32,.72,0,1);
+  overflow: hidden;
+}
+.pp-evpeek-head {
+  display: flex; align-items: center; gap: 9px;
+  padding: 13px 12px 13px 15px;
+  border-bottom: 1px solid var(--pp-line-soft);
+}
+.pp-evpeek-dot { width: 10px; height: 10px; border-radius: 999px; flex: none; }
+.pp-evpeek-title {
+  flex: 1; min-width: 0;
+  font-size: 14.5px; font-weight: 640; letter-spacing: -.012em;
+  color: var(--fg-base, #18181b);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pp-evpeek-body { display: flex; flex-direction: column; gap: 10px; padding: 14px 15px 16px; }
+.pp-evpeek-row {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 13px; color: var(--fg-subtle, #52525b);
+}
+.pp-evpeek-ico { flex: none; display: grid; place-items: center; color: var(--fg-muted, #71717a); }
+.pp-evpeek-ico svg { width: 15px; height: 15px; }
+.pp-evpeek-foot { margin-top: 2px; }

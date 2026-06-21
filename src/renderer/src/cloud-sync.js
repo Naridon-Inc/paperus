@@ -12,6 +12,7 @@
 // (`notionless_cloud_sync_disabled`) is read by p2p.js before it attaches the
 // cloud provider. Pure DOM, no framework — matches the rest of the renderer.
 import { Config } from './config'
+import { currentServerHost, isCustomServer, openServerDialog } from './server-config'
 
 const DISABLED_KEY = 'notionless_cloud_sync_disabled'
 
@@ -96,9 +97,28 @@ export function openSyncPopover(anchorEl) {
        <div style="margin-top:8px;color:#52525b;">
          Want notes available 24/7 (a Notion-style online app on your own domain)? <b>Self-host the full online stack</b> on your own box.
        </div>
-       <div style="margin-top:8px;"><a href="https://github.com/Naridon-Inc/Notionless/blob/master/docs/SELF_HOSTING.md" target="_blank" rel="noopener" style="color:#3b82f6;text-decoration:none;">How to self-host →</a></div>`
+       <div style="margin-top:8px;"><a href="https://github.com/Naridon-Inc/paperus/blob/master/docs/SELF_HOSTING.md" target="_blank" rel="noopener" style="color:#3b82f6;text-decoration:none;">How to self-host →</a></div>`
 
-  pop.innerHTML = titleRow + body
+  // Which server is brokering this client — the team's own self-hosted box, or
+  // Naridon's free global relay. The "Change/Connect" button opens the runtime,
+  // no-rebuild team-server switch (see server-config.js).
+  const onCustom = isCustomServer()
+  const serverHost = String(currentServerHost() || '').replace(/</g, '&lt;')
+  const serverRow = `
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid #f0f0f0;display:flex;align-items:center;gap:8px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:11px;color:#a1a1aa;">Team server</div>
+        <div style="font-size:12px;color:#3f3f46;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          ${serverHost}${onCustom ? '' : ' <span style="color:#a1a1aa;">· Naridon (free)</span>'}
+        </div>
+      </div>
+      <button class="cs-server" style="padding:5px 10px;border:1px solid #e4e4e7;border-radius:7px;
+        background:#fff;cursor:pointer;font-size:12px;color:#3b82f6;flex-shrink:0;">
+        ${onCustom ? 'Change' : 'Connect'}
+      </button>
+    </div>`
+
+  pop.innerHTML = titleRow + body + serverRow
   document.body.appendChild(pop)
 
   // Position under the anchor, kept within the viewport.
@@ -114,6 +134,9 @@ export function openSyncPopover(anchorEl) {
     // Reload so every open doc re-runs `_connectCloudMirror` with the new choice.
     location.reload()
   }
+
+  const serverBtn = pop.querySelector('.cs-server')
+  if (serverBtn) serverBtn.onclick = () => { close(); openServerDialog() }
 
   const onDocClick = (ev) => {
     if (pop.contains(ev.target) || ev.target === anchorEl) return

@@ -17,8 +17,8 @@ const engine = new RAGEngine();
 console.log('\nRegistry — built-ins');
 {
   const ids = engine.listTools().map((t) => t.id).sort();
-  ok(ids.join(',') === 'build_plugin,get_outline,list_documents,read_document,search_documents',
-    'the five read-only/authoring built-ins register at construction');
+  ok(ids.join(',') === 'build_plugin,get_outline,list_documents,read_document,recent_changes,search_documents',
+    'the six read-only/authoring built-ins register at construction');
   ok(engine.listTools().every((t) => t.source === 'builtin'), 'built-ins are tagged source=builtin');
 
   const catalog = engine._toolCatalog();

@@ -1,7 +1,7 @@
 {
   "name": "@notionless/plugin-sdk",
   "version": "1.0.0",
-  "description": "Authoring SDK for Notionless plugins. Provides definePlugin() and the full TypeScript surface for the FROZEN Plugin API v1 (apiVersion \"1\").",
+  "description": "Authoring SDK for Paperus plugins. Provides definePlugin() and the full TypeScript surface for the FROZEN Plugin API v1 (apiVersion \"1\").",
   "license": "MIT",
   "type": "module",
   "main": "index.js",

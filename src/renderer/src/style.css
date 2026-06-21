@@ -611,17 +611,27 @@ aside.collapsed + .main .traffic-lights-spacer.collapsed-only {
 
 .tab-close {
   opacity: 0;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 10px;
-  padding: 2px;
-  border-radius: 2px;
+  color: #908F8B;
+  border-radius: 50%;
+  margin-left: 2px;
+  transition: opacity 0.1s, background 0.1s, color 0.1s;
 }
 
-.tab:hover .tab-close {
+.tab:hover .tab-close,
+.tab.active .tab-close {
   opacity: 1;
 }
 
 .tab-close:hover {
   background: rgba(0,0,0,0.1);
+  color: #37352F;
 }
 
 .new-tab-btn {
@@ -1118,6 +1128,20 @@ main {
   position: relative;
 }
 
+/* React-island surfaces (Tasks / Calendar / Inbox / Email) must fill <main>
+   fully. <main> is a column flexbox; when a view is shown (display:flex set in
+   JS) it needs flex:1 so the island's height:100% chain resolves — otherwise it
+   is content-sized and leaves dead blank space at the bottom of the page. */
+#tasks-view,
+#calendar-view,
+#inbox-view,
+#email-view {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+}
+
 .window-control-btn {
   position: absolute;
   top: 15px;
@@ -1240,11 +1264,28 @@ main {
 
 /* Ensure seamless title scrolling */
 .editor-container {
-  overflow: hidden;
+  /* The WHOLE page scrolls as one: page cover/icon/title (.page-header), the
+     editor body, and the "Linked references" panel all live in this column and
+     scroll together. We stay a FLEX COLUMN (not block) so children get full
+     width via align-items:stretch — that's what gives CodeMirror's wrapping
+     editor its width. The children are flex-shrink:0 (below) so they keep their
+     natural height and OVERFLOW this fixed-height box, which then scrolls.
+     (Switching this to display:block collapsed CM's measured width and wrapped
+     the body one character per line — do not do that again.) */
+  overflow-y: auto;
+  overflow-x: hidden;
   height: calc(100vh - 48px - 32px); /* Minus header and footer */
   display: flex;
   flex-direction: column;
   background-color: var(--editor-bg);
+}
+
+/* Page-level scroll: each row keeps its natural height and overflows the box
+   (which scrolls) instead of being squeezed to fit. */
+.editor-container > .page-header,
+.editor-container > #editor,
+.editor-container > .backlinks-panel {
+  flex-shrink: 0;
 }
 
 /* .document-title-wrapper {
@@ -1280,24 +1321,39 @@ main {
 }
 
 /* --- CodeMirror 6 Layout --- */
+/* The editor grows to fit its content; the page-level scroll lives on
+   .editor-container (above), so the cover/title and backlinks scroll with it.
+   #editor stays a flex column (NOT block) so .cm-editor stretches to full width
+   — CodeMirror's line-wrapping measures that width; collapse it and the body
+   wraps one character per line. */
 #editor {
-    flex: 1;
-    min-height: 0;
     display: flex;
     flex-direction: column;
 }
 
 #editor .cm-editor {
-    flex: 1;
-    height: 100%;
+    /* height:auto (not 100%) so the editor grows to its content and the page,
+       not the editor, owns the scroll. Width still stretches via the flex column. */
+    height: auto;
+    width: 100%;
     font-size: 16px;
     /* Sans-serif by default — looks like a writing app, not a code editor */
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 #editor .cm-scroller {
-    overflow: auto;
-    height: 100%;
+    /* Don't trap the scroll here — let the content extend and the outer
+       .editor-container scroll the whole page. Keep full width so the wrapping
+       content measures correctly (overflow:visible must not shrink the box). */
+    overflow: visible;
+    height: auto;
+    width: 100%;
+}
+
+/* Keep a comfortable click target / min canvas for short notes so the editor
+   doesn't collapse to one line and the backlinks don't ride up under the title. */
+#editor .cm-content {
+    min-height: 45vh;
 }
 
 #editor .cm-content {
@@ -3508,6 +3564,43 @@ body.printing .document-title-wrapper {
     margin-top: 4px;
 }
 
+/* Theme segmented control (Appearance section of the workspace popover) */
+.wp-theme-row {
+    padding: 2px 12px 6px 12px;
+}
+.wp-theme-seg {
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    background: #f0f0f0;
+    border: 1px solid #eaeaea;
+    border-radius: 7px;
+}
+.wp-theme-opt {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 5px 4px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #666;
+    background: transparent;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+    font-family: inherit;
+}
+.wp-theme-opt i { font-size: 10px; }
+.wp-theme-opt:hover { color: #222; }
+.wp-theme-opt.active {
+    background: #fff;
+    color: #1a1a1a;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+
 .sidebar-header-area {
     height: 44px;
     -webkit-app-region: drag;
@@ -3581,6 +3674,47 @@ body.is-fullscreen .sidebar-header-area {
     flex-shrink: 0;
 }
 
+/* Bottom utility row — compact icon actions (Search / Graph / Inbox / Trash). */
+.sidebar-utility-row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+.sidebar-utility-btn {
+    position: relative;
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 30px;
+    border: none;
+    background: transparent;
+    color: #8a8a8a;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.15s, color 0.15s;
+}
+.sidebar-utility-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #37352f;
+}
+.sidebar-utility-btn .utility-badge {
+    position: absolute;
+    top: 2px;
+    right: 5px;
+    min-width: 14px;
+    height: 14px;
+    padding: 0 3px;
+    border-radius: 7px;
+    background: #2f6fed;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 14px;
+    text-align: center;
+}
+
 /* Toggle List */
 .toggle-item {
     display: flex;
@@ -3652,14 +3786,14 @@ li[data-list="checked"] {
     cursor: pointer;
     font-size: 13px;
     font-weight: 500;
-    color: #444;
-    border-radius: 4px;
+    color: #4a4d53;
+    border-radius: 6px;
     transition: background 0.1s;
     user-select: none;
 }
 
 .sidebar-team-header:hover {
-    background: #f0f0f0;
+    background: rgba(0, 0, 0, 0.05);
 }
 
 .sidebar-team-children {
@@ -3852,9 +3986,8 @@ li[data-list="checked"] {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 150px; /* Adjust as needed */
-    display: inline-block; /* For ellipsis to work */
-    vertical-align: middle;
+    flex: 1 1 auto;   /* expand so the close × is pushed to the right edge */
+    min-width: 0;     /* allow the flex item to shrink for ellipsis */
 }
 
 /* Workspace Popover Detailed Styles */
@@ -5836,19 +5969,29 @@ li[data-list="checked"] {
     border-radius: 6px !important;
 }
 
-/* Selected: accent fill in the SAME inset pill — rounded, not full-bleed. */
+/* Selected: subtle neutral grey pill (Notion-style) in the SAME inset pill —
+   normal dark text, a muted leading icon. Distinct from the lighter hover. */
 .tree-item.active,
 .sidebar-item.active,
 .sidebar-doc-item.active,
 #home-btn.active {
-    background: var(--accent) !important;
-    color: #fff !important;
+    background: rgba(0, 0, 0, 0.08) !important;
+    color: #1f2024 !important;
     border-radius: 6px !important;
+    font-weight: 500 !important;
 }
-.tree-item.active *,
-.sidebar-item.active *,
-.sidebar-doc-item.active * {
-    color: #fff !important;
+.tree-item.active .doc-name-label,
+.sidebar-item.active .doc-name-label,
+.sidebar-doc-item.active .doc-name-label,
+.sidebar-item.active span,
+.sidebar-doc-item.active span {
+    color: #1f2024 !important;
+}
+.tree-item.active i,
+.tree-item.active .tree-icon,
+.sidebar-item.active i,
+.sidebar-doc-item.active i {
+    color: #6b6f76 !important;
 }
 
 /* Expand/collapse affordance: a chevron-in-circle that rotates down when open.
@@ -5971,3 +6114,982 @@ li[data-list="checked"] {
 .ext-link { color: #3b5bdb; cursor: pointer; text-decoration: none; }
 .ext-link:hover { text-decoration: underline; }
 .setup-toast { margin-top: 10px; font-size: 12px; color: #c0392b; }
+
+/* ============================================================================
+   Company Brain — composer extras: model picker, attachments, conversations
+   ========================================================================== */
+
+/* Stack the composer: attachment tray (top) · input · tool bar (bottom). */
+.brain-input-wrapper { flex-direction: column !important; align-items: center !important; gap: 8px; }
+
+/* Attachment tray (pending, above the input) */
+.brain-attachments {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  width: 100%; max-width: 800px;
+}
+.brain-attach-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #f4f4f5; border: 1px solid #ececec; border-radius: 999px;
+  padding: 3px 6px 3px 8px; max-width: 220px; font-size: 12px; color: #444;
+}
+.brain-attach-chip.kind-pdf i { color: #c0392b; }
+.brain-attach-chip.kind-text i { color: #6b6b6b; }
+.brain-attach-chip > i { font-size: 12px; flex-shrink: 0; }
+.brain-attach-thumb {
+  width: 22px; height: 22px; border-radius: 5px; object-fit: cover; flex-shrink: 0;
+}
+.brain-attach-name {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;
+}
+.brain-attach-x {
+  border: none; background: transparent; color: #9a9a9a; cursor: pointer;
+  width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0; font-size: 10px; padding: 0;
+}
+.brain-attach-x:hover { background: #e6e6e6; color: #555; }
+
+/* Composer tool bar (below the input): attach · model · spacer · clear */
+.brain-composer-bar {
+  display: flex; align-items: center; gap: 6px;
+  width: 100%; max-width: 800px;
+}
+.brain-composer-spacer { flex: 1; }
+.brain-composer-btn {
+  border: none; background: transparent; color: #9a9a9a; cursor: pointer;
+  height: 28px; min-width: 28px; padding: 0 8px; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: 12.5px; transition: background .15s, color .15s;
+}
+.brain-composer-btn:hover { background: #f2f2f2; color: #555; }
+.brain-composer-clear:hover { color: #c0392b; }
+.brain-model-pill {
+  background: #f4f4f5; color: #555; font-weight: 500; padding: 0 10px;
+  max-width: 220px;
+}
+.brain-model-pill:hover { background: #ececed; color: #333; }
+.brain-model-pill #brain-model-label {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;
+}
+
+/* Transient hint under the composer (e.g. "image too large") */
+.brain-composer-note {
+  width: 100%; max-width: 800px; font-size: 11.5px; color: #c98a1e;
+  opacity: 0; max-height: 0; overflow: hidden; transition: opacity .2s, max-height .2s;
+}
+.brain-composer-note.show { opacity: 1; max-height: 40px; }
+
+/* Model picker popover (anchored above the pill) */
+.brain-model-menu {
+  position: fixed; z-index: 1000; min-width: 220px; max-width: 320px;
+  max-height: 360px; overflow-y: auto; background: #fff; border: 1px solid #e6e6e6;
+  border-radius: 12px; box-shadow: 0 10px 32px rgba(0, 0, 0, 0.12); padding: 6px;
+}
+.brain-model-menu .bmm-note { font-size: 11px; color: #8a8a8a; padding: 6px 8px; line-height: 1.45; }
+.brain-model-menu .bmm-empty { font-size: 12.5px; color: #9a9a9a; padding: 8px; }
+.brain-model-menu .bmm-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  width: 100%; border: none; background: transparent; cursor: pointer; text-align: left;
+  padding: 8px 10px; border-radius: 8px; font-size: 13px; color: #333;
+}
+.brain-model-menu .bmm-item:hover { background: #f4f4f5; }
+.brain-model-menu .bmm-item.selected { color: #1a1a1a; font-weight: 600; }
+.brain-model-menu .bmm-item i { color: #3f9c52; font-size: 11px; }
+.brain-model-menu .bmm-item span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brain-model-menu .bmm-sep { height: 1px; background: #f0f0f0; margin: 5px 2px; }
+.brain-model-menu .bmm-custom { display: flex; gap: 6px; padding: 4px; }
+.brain-model-menu .bmm-custom input {
+  flex: 1; min-width: 0; border: 1px solid #e2e2e2; border-radius: 8px;
+  padding: 7px 9px; font-size: 12.5px; outline: none; font-family: inherit;
+}
+.brain-model-menu .bmm-custom input:focus { border-color: #bcbcbc; }
+.brain-model-menu .bmm-custom button {
+  border: none; background: #1a1a1a; color: #fff; border-radius: 8px;
+  padding: 0 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.brain-model-menu .bmm-custom button:hover { background: #000; }
+
+/* Brand logo on the pill + reasoning-effort controls in the model menu */
+.brain-model-pill .brain-model-logo { display: inline-flex; align-items: center; }
+.brain-model-pill .brain-model-logo .brain-svc-logo { width: 14px; height: 14px; }
+.brain-model-menu .bmm-item .bmm-logo { flex: 0 0 auto; display: inline-flex; align-items: center; }
+.brain-model-menu .bmm-item .bmm-logo .brain-svc-logo { width: 16px; height: 16px; }
+.brain-model-menu .bmm-item .bmm-label {
+  flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.brain-model-menu .bmm-item .bmm-tier { flex: 0 0 auto; font-size: 10.5px; color: #a1a1aa; font-weight: 400; }
+.brain-model-menu .bmm-item.selected .bmm-tier { color: #9a9aa2; }
+.brain-model-menu .bmm-item .bmm-reason { color: #a1a1aa; font-size: 10px; flex: 0 0 auto; display: inline-flex; align-items: center; }
+.brain-model-menu .bmm-item .bmm-check { color: #3f9c52; font-size: 11px; flex: 0 0 auto; }
+.brain-model-menu .bmm-effort-head {
+  display: flex; align-items: center; gap: 6px; font-size: 11px; color: #8a8a8a; padding: 4px 8px 2px;
+}
+.brain-model-menu .bmm-effort-head i { color: #8a8a8a; font-size: 10px; }
+.brain-model-menu .bmm-effort-row { display: flex; gap: 4px; padding: 2px 6px 4px; }
+.brain-model-menu .bmm-effort {
+  flex: 1; border: 1px solid #e6e6e6; background: #fafafa; color: #555; border-radius: 7px;
+  padding: 5px 0; font-size: 11.5px; font-weight: 500; cursor: pointer; text-align: center;
+}
+.brain-model-menu .bmm-effort:hover { background: #f0f0f0; }
+.brain-model-menu .bmm-effort.on { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+
+/* The Brain's spark glyph — subtle, monochrome (inherits currentColor), sized per slot */
+.brain-spark { display: inline-block; vertical-align: -0.18em; width: 16px; height: 16px; }
+.brain-spark.sidebar-spark { width: 15px; height: 15px; opacity: 0.85; }
+.brain-spark.brain-spark-lg { width: 30px; height: 30px; }
+.brain-spark.brain-spark-avatar { width: 17px; height: 17px; }
+.brain-model-menu .bmm-reason .bmm-reason-spark { width: 12px; height: 12px; }
+.brain-model-menu .bmm-effort-head .bmm-effort-spark { width: 12px; height: 12px; opacity: 0.8; }
+
+/* Token/cost readout under an answer */
+.brain-msg-usage {
+  margin-top: 8px; font-size: 11px; color: #a1a1aa; display: flex; align-items: center; gap: 6px;
+}
+.brain-msg-usage i { font-size: 10px; color: #c0a23a; }
+
+/* Attachment strip shown inside a sent user message bubble */
+.brain-msg-attachments { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.brain-msg-attach {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #f4f4f5; border: 1px solid #ececec; border-radius: 8px;
+  padding: 4px 8px; font-size: 11.5px; color: #555; max-width: 220px;
+}
+.brain-msg-attach.kind-pdf i { color: #c0392b; }
+.brain-msg-attach .brain-attach-name { max-width: 150px; }
+.brain-msg-attach .brain-attach-thumb { width: 20px; height: 20px; border-radius: 4px; }
+
+/* Conversations (threads) — left slide-in drawer over the chat */
+.brain-body { position: relative; }
+.brain-threads-panel {
+  position: absolute; top: 0; left: 0; bottom: 0; width: 280px; max-width: 82%;
+  background: #fff; border-right: 1px solid #ececec; z-index: 20;
+  display: flex; flex-direction: column;
+  transform: translateX(-100%); transition: transform .2s ease;
+  box-shadow: 2px 0 18px rgba(0, 0, 0, 0.06);
+}
+.brain-threads-panel.open { transform: translateX(0); }
+.brain-threads-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 10px 12px 16px; border-bottom: 1px solid #f2f2f2; flex-shrink: 0;
+  font-weight: 650; font-size: 13px; color: #1a1a1a;
+}
+.brain-threads-list { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 6px; }
+.brain-thread-group {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  color: #b0b0b0; padding: 10px 10px 4px;
+}
+.brain-thread-item {
+  display: flex; align-items: center; gap: 6px; padding: 7px 8px; border-radius: 8px;
+  cursor: pointer; transition: background .12s;
+}
+.brain-thread-item:hover { background: #f6f6f6; }
+.brain-thread-item.active { background: #f0f0f0; }
+.brain-thread-title {
+  flex: 1; min-width: 0; font-size: 13px; color: #333;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;
+}
+.brain-thread-item.active .brain-thread-title { color: #1a1a1a; font-weight: 600; }
+.brain-thread-actions { display: flex; gap: 2px; opacity: 0; transition: opacity .12s; flex-shrink: 0; }
+.brain-thread-item:hover .brain-thread-actions { opacity: 1; }
+.brain-thread-act {
+  border: none; background: transparent; color: #9a9a9a; cursor: pointer;
+  width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center;
+  justify-content: center; font-size: 11px; padding: 0;
+}
+.brain-thread-act:hover { background: #e8e8e8; color: #555; }
+.brain-threads-scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.10); z-index: 15; }
+
+/* ============================================================================
+   Company Brain — Notion-style redesign (empty state · composer card · bubbles)
+   Appended last so it layers cleanly over the earlier Brain passes. Light values
+   here; theme-dark.css mirrors every rule under :root[data-theme="dark"].
+   ========================================================================== */
+
+/* Roomier, centered chat column. */
+.brain-chat-panel { padding: 28px 24px 32px; }
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+.brain-welcome {
+  margin: auto; width: 100%; max-width: 720px;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 24px 0;
+}
+.brain-welcome-logo {
+  width: 64px; height: 64px; border-radius: 50%; background: #fff;
+  border: 1px solid #ececec; box-shadow: 0 6px 22px rgba(0, 0, 0, 0.08);
+  display: flex; align-items: center; justify-content: center; color: #1a1a1a;
+  margin-bottom: 20px;
+}
+.brain-welcome-logo .brain-welcome-spark { width: 30px; height: 30px; }
+.brain-welcome-title {
+  font-size: 30px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 8px;
+  background: linear-gradient(180deg, #2a2a2a, #9a9a9a);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.brain-welcome-sub { font-size: 13px; color: #8a8a8a; margin: 0 0 28px; line-height: 1.5; max-width: 460px; }
+.brain-welcome-cols {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 32px;
+  width: 100%; text-align: left; margin-top: 4px;
+}
+.brain-welcome-col-head { font-size: 12px; font-weight: 600; color: #9a9a9a; margin: 0 0 10px; padding-left: 8px; }
+.brain-welcome-list { display: flex; flex-direction: column; gap: 2px; }
+.brain-welcome-empty { font-size: 13px; color: #b4b4b4; padding: 6px 8px; }
+
+/* Suggested + recent rows: clean list items with a leading icon (no pills). */
+.brain-welcome .brain-suggestion,
+.brain-welcome-recent {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  background: transparent; border: none; border-radius: 8px;
+  padding: 8px; font-size: 13.5px; color: #37352f; cursor: pointer;
+  text-align: left; transition: background .12s; line-height: 1.4;
+}
+.brain-welcome .brain-suggestion:hover,
+.brain-welcome-recent:hover { background: #f1f1ef; }
+.brain-welcome .brain-suggestion i,
+.brain-welcome-recent i { width: 18px; text-align: center; font-size: 13px; color: #9a9a9a; flex-shrink: 0; }
+.brain-welcome .brain-suggestion span,
+.brain-welcome-recent span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Composer: one big rounded card (textarea on top, controls below) ─────── */
+.brain-composer-card {
+  width: 100%; max-width: 760px;
+  background: #fff; border: 1px solid #e6e6e6; border-radius: 16px;
+  padding: 12px 12px 10px; box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05);
+  transition: border-color .15s, box-shadow .15s;
+}
+.brain-composer-card:focus-within { border-color: #cfcfcf; box-shadow: 0 6px 22px rgba(0, 0, 0, 0.07); }
+.brain-composer-card textarea {
+  width: 100%; border: none; background: transparent; outline: none; resize: none;
+  font-family: inherit; font-size: 14.5px; line-height: 1.5; color: #1f1f1f;
+  padding: 4px 6px 2px; max-height: 160px;
+}
+.brain-composer-card textarea::placeholder { color: #a9a9a9; }
+.brain-composer-card .brain-composer-bar { max-width: none; margin-top: 6px; gap: 6px; }
+.brain-composer-attach { font-size: 15px; }
+
+/* Send → blue circle (Notion). */
+.brain-input-wrapper .brain-send-btn {
+  background: #2383e2 !important; color: #fff; width: 30px; height: 30px;
+  border-radius: 50% !important; flex-shrink: 0;
+}
+.brain-input-wrapper .brain-send-btn:hover { background: #1b6fc4 !important; transform: none !important; }
+
+/* ── Conversation bubbles (user = right grey bubble, assistant = plain) ───── */
+.brain-message { max-width: 760px; gap: 0; }
+.brain-message.msg-user { justify-content: flex-end; }
+.brain-message.msg-user .message-avatar,
+.brain-message.msg-brain .message-avatar { display: none; }
+.brain-message.msg-user .message-content {
+  flex: 0 1 auto; max-width: 82%;
+  background: #f1f1ef; border-radius: 16px; padding: 11px 15px;
+}
+.brain-message.msg-user .message-body { color: #2f2f2f; }
+.brain-message.msg-brain .message-content { padding: 0; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Workspace Shell sidebar (Claude Design "Workspace Shell"). Light-only: one
+   scoped palette of hardcoded Notion-key values drives every component. The app
+   rail (Home / Chat / Calendar / Inbox) swaps the contextual nav panel below it;
+   each panel is a `.sb-view`.
+   ═══════════════════════════════════════════════════════════════════════════ */
+#sidebar {
+    --pp-ws-bg:     #F7F7F5;
+    --pp-ws-text:   #37352F;
+    --pp-ws-faint:  #50504C;
+    --pp-ws-muted:  #9B9A97;
+    --pp-ws-hover:  #ECECEA;
+    --pp-ws-active: #E5E5E2;
+    --pp-ws-line:   #EAEAE8;
+    --pp-ws-accent: #2383E2;
+    --pp-ws-card:   #ffffff;
+    background: var(--pp-ws-bg);
+}
+
+/* Nav wrapper holds the workspace switcher + the app rail. */
+#sidebar .sidebar-nav-list {
+    border-bottom: 1px solid var(--pp-ws-line) !important;
+    padding: 6px 8px 8px !important;
+    margin-bottom: 4px !important;
+}
+
+/* Workspace switcher — rounded hover pill: icon + name + chevron. */
+.ws-switcher {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 8px; margin: 2px 2px 5px;
+    border-radius: 999px; cursor: pointer;
+    -webkit-app-region: no-drag;
+    transition: background 0.12s;
+}
+.ws-switcher:hover { background: var(--pp-ws-hover); }
+.ws-switcher .workspace-icon { width: 22px; height: 22px; border-radius: 5px; font-size: 12px; }
+.ws-switcher .ws-name {
+    flex: 1; min-width: 0;
+    font-size: 14px; font-weight: 600; letter-spacing: -0.01em; color: var(--pp-ws-text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ws-switcher .ws-chevron { flex: none; color: var(--pp-ws-text); opacity: 0.4; }
+
+/* App rail — horizontal icon row; the active app expands into a labelled pill. */
+.appnav { display: flex; align-items: center; gap: 2px; padding: 2px 0 0; }
+.appnav-spacer { flex: 1; }
+.appnav-btn {
+    display: inline-flex; align-items: center; flex: none;
+    width: 32px; height: 32px; padding: 0;
+    border: none; background: transparent; cursor: pointer;
+    color: var(--pp-ws-faint);
+    border-radius: 999px; overflow: hidden;
+    -webkit-app-region: no-drag;
+    transition: background 0.12s, color 0.12s, width 0.16s ease, padding 0.16s ease;
+}
+.appnav-btn > svg { width: 18px; height: 18px; flex: none; margin: 0 7px; }
+.appnav-btn .appnav-label {
+    max-width: 0; opacity: 0;
+    font-size: 14px; font-weight: 600; color: var(--pp-ws-text);
+    white-space: nowrap; overflow: hidden;
+    transition: max-width 0.16s ease, opacity 0.12s;
+}
+.appnav-btn:hover { background: var(--pp-ws-hover); color: var(--pp-ws-text); }
+.appnav-btn.is-active {
+    width: auto; padding-right: 13px;
+    background: var(--pp-ws-active); color: var(--pp-ws-text);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.03);
+}
+.appnav-btn.is-active > svg { margin-left: 11px; margin-right: 7px; }
+.appnav-btn.is-active .appnav-label { max-width: 120px; opacity: 1; }
+.appnav-btn--ghost { color: var(--pp-ws-muted); }
+
+/* ── Contextual panels ──────────────────────────────────────────────────── */
+#sidebar .sidebar-content { padding: 0 6px; }
+.sb-view { display: flex; flex-direction: column; }
+
+/* Section headers in the Notion key: small, medium-weight, muted. */
+#sidebar .sidebar-section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12px; font-weight: 500; color: var(--pp-ws-muted);
+    text-transform: none; letter-spacing: 0;
+    padding: 14px 11px 4px;
+}
+#sidebar .sidebar-section-header.sb-hdr-row { gap: 7px; justify-content: flex-start; }
+#sidebar .sidebar-section { margin-bottom: 2px; }
+#sidebar .shdr-actions { display: flex; gap: 6px; }
+#sidebar .shdr-actions .icon-btn {
+    font-size: 12px; cursor: pointer; opacity: 0.55; color: var(--pp-ws-faint);
+    transition: opacity 0.15s;
+}
+#sidebar .shdr-actions .icon-btn:hover { opacity: 1; }
+.sb-beta {
+    font-size: 10px; font-weight: 500; color: var(--pp-ws-muted);
+    background: #E6E6E3; padding: 1px 6px; border-radius: 999px;
+}
+.sb-empty { font-size: 12.5px; color: var(--pp-ws-muted); padding: 4px 11px 8px; }
+
+/* Pill rows — the file tree, doc items, app/cal/folder rows all share the look. */
+#sb-view-home .file-tree .tree-item,
+#sb-view-home .sidebar-doc-item,
+.sb-app-row, .sb-cal-row, .sb-folder {
+    border-radius: 999px !important;
+}
+#sb-view-home .file-tree .tree-item:hover:not(.active),
+#sb-view-home .sidebar-doc-item:hover:not(.active) { background: var(--pp-ws-hover) !important; }
+#sb-view-home .file-tree .tree-item.active,
+#sb-view-home .sidebar-doc-item.active { background: var(--pp-ws-active) !important; color: var(--pp-ws-text) !important; }
+
+/* Apps / calendar / folder rows: 999px pill, icon + label. */
+.sb-app-row, .sb-cal-row, .sb-folder {
+    display: flex; align-items: center; gap: 9px; width: 100%;
+    padding: 6px 11px; border: none; background: transparent; cursor: pointer;
+    font-size: 13.5px; font-weight: 500; color: var(--pp-ws-text); text-align: left;
+    -webkit-app-region: no-drag; transition: background 0.12s;
+}
+.sb-app-row:hover, .sb-cal-row:hover, .sb-folder:hover { background: var(--pp-ws-hover); }
+.sb-app-row > i { width: 18px; text-align: center; font-size: 14px; flex: none; color: var(--pp-ws-faint); }
+.sb-folder.is-active { background: var(--pp-ws-active); font-weight: 600; }
+.sb-folder.is-active .sb-folder-ic { color: var(--pp-ws-accent); }
+.sb-folder-ic { display: flex; width: 18px; justify-content: center; flex: none; color: var(--pp-ws-faint); }
+.sb-folder-ic svg, .sb-cal-row svg { width: 16px; height: 16px; }
+.sb-app-row .utility-badge {
+    margin-left: auto; font-size: 11px; font-weight: 600; color: #fff;
+    background: var(--pp-ws-accent); min-width: 17px; height: 17px; padding: 0 5px;
+    border-radius: 999px; display: inline-flex; align-items: center; justify-content: center;
+}
+.sb-dot { width: 11px; height: 11px; border-radius: 50%; flex: none; }
+
+/* Chat view — Recent conversation rows (pill, icon + truncated title). */
+.sb-chat-row {
+    display: flex; align-items: center; gap: 9px; width: 100%;
+    padding: 6px 11px; border: none; background: transparent; cursor: pointer;
+    border-radius: 999px; font-size: 13.5px; font-weight: 500; color: var(--pp-ws-text);
+    text-align: left; -webkit-app-region: no-drag; transition: background 0.12s;
+}
+.sb-chat-row:hover { background: var(--pp-ws-hover); }
+.sb-chat-row.is-active { background: var(--pp-ws-active); font-weight: 600; }
+.sb-chat-row.is-active .sb-chat-ic { color: var(--pp-ws-accent); }
+.sb-chat-ic { width: 18px; height: 16px; flex: none; color: var(--pp-ws-faint); }
+.sb-chat-nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Mail (Inbox) view — Compose + account switcher + folders, all in ONE
+      sidebar (painted by renderMailNav). Rows reuse the .sb-folder pill look. ── */
+.sb-folder-nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-ct {
+    margin-left: auto; flex: none; font-size: 11.5px; font-weight: 600;
+    color: var(--pp-ws-muted); font-variant-numeric: tabular-nums;
+}
+.sb-mail-accts { display: flex; flex-direction: column; gap: 1px; }
+.sb-acct-row {
+    display: flex; align-items: center; gap: 9px; width: 100%;
+    padding: 5px 11px; border: none; background: transparent; cursor: pointer;
+    border-radius: 999px; font-size: 13.5px; font-weight: 500; color: var(--pp-ws-text);
+    text-align: left; -webkit-app-region: no-drag; transition: background 0.12s;
+}
+.sb-acct-row:hover { background: var(--pp-ws-hover); }
+.sb-acct-row.is-active { background: var(--pp-ws-active); font-weight: 600; }
+.sb-acct-av {
+    width: 20px; height: 20px; border-radius: 50%; flex: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 10.5px; font-weight: 700; color: #fff; overflow: hidden;
+}
+.sb-acct-av--all { background: var(--pp-ws-active); color: var(--pp-ws-faint); }
+.sb-acct-av--all svg { width: 13px; height: 13px; }
+.sb-acct-nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-mail-sep { height: 1px; background: var(--pp-ws-line); margin: 7px 10px; }
+.sb-mail-subhead {
+    padding: 5px 11px 2px; font-size: 11px; font-weight: 600; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--pp-ws-muted);
+}
+.sb-mail-foot { display: flex; flex-direction: column; gap: 1px; }
+.sb-mail-foot .sb-folder { color: var(--pp-ws-faint); }
+
+/* Connected CalDAV calendar rows — colour dot + name + hover visibility eye. */
+.sb-cal-nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-cal-eye { flex: none; display: flex; align-items: center; color: var(--pp-ws-muted); opacity: 0; transition: opacity 0.12s; }
+.sb-cal-eye svg { width: 15px; height: 15px; }
+.sb-cal-row:hover .sb-cal-eye { opacity: 0.8; }
+.sb-cal-row.is-hidden { opacity: 0.45; }
+.sb-cal-row.is-hidden .sb-cal-eye { opacity: 0.8; }
+
+/* Chat view — Agents avatar strip: a horizontal row of circular persona avatars
+ * (named) plus a dashed "New agent". Scrolls sideways when there are many. */
+.sb-agents {
+    display: flex; gap: 13px; padding: 6px 11px 10px;
+    overflow-x: auto; scrollbar-width: none;
+}
+.sb-agents::-webkit-scrollbar { display: none; }
+.sb-agent {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    width: 56px; flex: none; border: none; background: transparent; cursor: pointer;
+    padding: 0; -webkit-app-region: no-drag;
+}
+/* Shared tinted circular avatar (sidebar strip + builder + approval). */
+.brain-agent-av {
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 50%; flex: none; transition: filter 0.12s, box-shadow 0.12s;
+    background: color-mix(in srgb, var(--agent-c, #6b7280) 13%, #fff);
+    border: 1px solid color-mix(in srgb, var(--agent-c, #6b7280) 26%, #fff);
+    color: var(--agent-c, #6b7280);
+}
+.brain-agent-av svg, .brain-agent-av .spark-icon { width: 56%; height: 56%; }
+.sb-agent:hover .brain-agent-av { filter: brightness(0.98); }
+.sb-agent.is-active .brain-agent-av { box-shadow: 0 0 0 2px var(--pp-ws-bg, #fff), 0 0 0 3.5px var(--agent-c, #6b7280); }
+.sb-agent.is-active .sb-agent-nm { color: var(--pp-ws-text); font-weight: 600; }
+.sb-agent-ic {
+    width: 34px; height: 34px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent; border: 1.5px dashed #C7C7C4; color: var(--pp-ws-muted);
+    transition: border-color 0.12s, color 0.12s;
+}
+.sb-agent-ic svg { width: 16px; height: 16px; }
+.sb-agent--new:hover .sb-agent-ic { border-color: var(--pp-ws-muted); color: var(--pp-ws-text); }
+.sb-agent-nm {
+    max-width: 56px; font-size: 11px; font-weight: 500; color: var(--pp-ws-faint);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center;
+}
+/* Time-bucket headers in the recents list sit tighter than section headers. */
+.sb-time-header { margin-top: 10px; }
+.sb-time-header:first-child { margin-top: 2px; }
+
+/* ═══ Brain write-approval modal + agent builder ════════════════════════════ */
+.brain-approve-overlay {
+    position: fixed; inset: 0; z-index: 4000;
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+    background: rgba(15, 15, 17, 0.34); backdrop-filter: blur(1.5px);
+    animation: brain-approve-fade 0.12s ease;
+}
+@keyframes brain-approve-fade { from { opacity: 0 } to { opacity: 1 } }
+.brain-approve, .brain-builder {
+    width: 100%; max-width: 524px; max-height: 84vh; display: flex; flex-direction: column;
+    background: var(--pp-ws-bg, #fff); color: var(--pp-ws-text, #1f1f1f);
+    border: 1px solid var(--pp-line, #e8e8e6); border-radius: 14px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22); overflow: hidden;
+    animation: brain-approve-pop 0.14s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+@keyframes brain-approve-pop { from { transform: translateY(6px) scale(0.985); opacity: 0 } to { transform: none; opacity: 1 } }
+.brain-approve-head, .brain-builder-head { padding: 18px 20px 12px; border-bottom: 1px solid var(--pp-line, #eee); }
+.brain-approve-title { font-size: 15px; font-weight: 650; letter-spacing: -0.01em; }
+.brain-approve-sub2 { margin-top: 3px; font-size: 12.5px; color: var(--fg-muted, #8a8a8a); }
+.brain-approve-detail { padding: 16px 20px; overflow-y: auto; }
+.brain-approve-field { display: flex; gap: 12px; padding: 5px 0; font-size: 13px; }
+.brain-approve-field > span { flex: none; width: 58px; color: var(--fg-muted, #8a8a8a); }
+.brain-approve-field > div { flex: 1; min-width: 0; word-break: break-word; }
+.brain-approve-body {
+    margin-top: 12px; padding: 12px 14px; border-radius: 9px;
+    background: var(--pp-ws-hover, #f7f7f5); border: 1px solid var(--pp-line, #eee);
+    font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word;
+    max-height: 320px; overflow-y: auto;
+}
+.brain-approve-list { list-style: none; margin: 0 0 4px; padding: 0; max-height: 220px; overflow-y: auto; }
+.brain-approve-list li { display: flex; gap: 10px; align-items: baseline; padding: 6px 0; border-bottom: 1px solid var(--pp-line, #f0f0ee); font-size: 12.5px; }
+.brain-approve-to { flex: none; max-width: 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.brain-approve-sub { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-muted, #8a8a8a); }
+.brain-approve-more { color: var(--fg-muted, #8a8a8a); font-style: italic; }
+.brain-approve-sample-h { margin: 12px 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--fg-muted, #9a9a9a); }
+.brain-approve-actions { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--pp-line, #eee); }
+.brain-approve-actions > span { flex: 1; }
+.brain-approve-cancel, .brain-approve-ok, .brain-builder-del {
+    padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+    border: 1px solid var(--pp-line, #ddd); background: var(--pp-ws-bg, #fff); color: var(--pp-ws-text, #222);
+    -webkit-app-region: no-drag; transition: background 0.12s, border-color 0.12s;
+}
+.brain-approve-cancel:hover { background: var(--pp-ws-hover, #f4f4f2); }
+.brain-approve-ok { margin-left: auto; border-color: transparent; background: var(--pp-ws-accent, #2f6df6); color: #fff; }
+.brain-approve-ok:hover { filter: brightness(1.05); }
+.brain-builder-del { color: #c0392b; border-color: transparent; background: transparent; margin-left: 0; }
+.brain-builder-del:hover { background: rgba(192, 57, 43, 0.08); }
+
+/* Builder body */
+.brain-builder-body { padding: 16px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+.brain-builder-row { display: flex; align-items: center; gap: 14px; }
+.brain-builder-row--col { flex-direction: column; align-items: stretch; gap: 8px; }
+.brain-builder-lbl { flex: none; width: 92px; font-size: 12.5px; font-weight: 600; color: var(--pp-ws-text); }
+.brain-builder-row--col .brain-builder-lbl { width: auto; color: var(--fg-muted, #8a8a8a); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.03em; }
+.brain-builder-name, .brain-builder-instr {
+    flex: 1; width: 100%; padding: 9px 11px; border-radius: 8px; font: inherit; font-size: 13px;
+    border: 1px solid var(--pp-line, #ddd); background: var(--pp-ws-bg, #fff); color: var(--pp-ws-text);
+    resize: vertical; box-sizing: border-box;
+}
+.brain-builder-name:focus, .brain-builder-instr:focus { outline: none; border-color: var(--pp-ws-accent, #2f6df6); }
+.brain-builder-avatar { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.brain-builder-glyphs, .brain-builder-colors { display: flex; gap: 8px; flex-wrap: wrap; }
+.brain-builder-glyph {
+    width: 36px; height: 36px; border-radius: 9px; cursor: pointer; color: var(--pp-ws-faint);
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--pp-line, #e2e2e0); background: var(--pp-ws-bg, #fff); transition: all 0.12s;
+}
+.brain-builder-glyph svg { width: 19px; height: 19px; }
+.brain-builder-glyph:hover { background: var(--pp-ws-hover, #f5f5f3); }
+.brain-builder-glyph.sel { border-color: var(--pp-ws-accent, #2f6df6); color: var(--pp-ws-accent, #2f6df6); box-shadow: inset 0 0 0 1px var(--pp-ws-accent, #2f6df6); }
+.brain-builder-color { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform 0.1s; }
+.brain-builder-color:hover { transform: scale(1.08); }
+.brain-builder-color.sel { box-shadow: 0 0 0 2px var(--pp-ws-bg, #fff), 0 0 0 4px currentColor; }
+.brain-builder-tools { display: flex; flex-direction: column; gap: 6px; }
+.brain-builder-tool, .brain-builder-policy {
+    display: flex; align-items: flex-start; gap: 10px; padding: 9px 11px; cursor: pointer;
+    border: 1px solid var(--pp-line, #eee); border-radius: 9px; transition: background 0.12s, border-color 0.12s;
+}
+.brain-builder-tool:hover, .brain-builder-policy:hover { background: var(--pp-ws-hover, #f7f7f5); }
+.brain-builder-tool input, .brain-builder-policy input { margin-top: 2px; flex: none; accent-color: var(--pp-ws-accent, #2f6df6); }
+.brain-builder-tool-l { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.brain-builder-tool-l b { font-size: 13px; font-weight: 600; }
+.brain-builder-tool-l i { font-size: 11.5px; font-style: normal; color: var(--fg-muted, #8a8a8a); }
+.brain-builder-mcplink {
+    align-self: flex-start; margin-top: 2px; padding: 7px 4px; font-size: 12.5px; font-weight: 600;
+    color: var(--pp-ws-accent, #2f6df6); background: none; border: none; cursor: pointer; -webkit-app-region: no-drag;
+}
+.brain-builder-mcplink:hover { text-decoration: underline; }
+
+/* ── MCP connectors dialog ─────────────────────────────────────────────── */
+.brain-mcp {
+    width: 100%; max-width: 560px; max-height: 86vh; display: flex; flex-direction: column;
+    background: var(--pp-ws-bg, #fff); color: var(--pp-ws-text, #1f1f1f);
+    border: 1px solid var(--pp-line, #e8e8e6); border-radius: 14px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22); overflow: hidden;
+    animation: brain-approve-pop 0.14s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.brain-mcp-body { padding: 14px 18px 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+.brain-mcp-list { display: flex; flex-direction: column; gap: 8px; }
+.brain-mcp-empty { padding: 18px 14px; text-align: center; font-size: 12.5px; color: var(--fg-muted, #8a8a8a);
+    border: 1px dashed var(--pp-line, #e2e2e0); border-radius: 10px; }
+.brain-mcp-row {
+    display: flex; align-items: flex-start; gap: 12px; padding: 11px 12px;
+    border: 1px solid var(--pp-line, #eee); border-radius: 10px; background: var(--pp-ws-bg, #fff);
+}
+.brain-mcp-row-main { flex: 1; min-width: 0; }
+.brain-mcp-row-top { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.brain-mcp-row-top b { font-weight: 650; }
+.brain-mcp-row-sub { margin-top: 2px; font-size: 11.5px; color: var(--fg-muted, #8a8a8a); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brain-mcp-err { margin-top: 5px; font-size: 11.5px; color: #c0392b; word-break: break-word; }
+.brain-mcp-count { font-size: 11px; font-weight: 600; color: var(--pp-ws-accent, #2f6df6); background: rgba(47,109,246,0.1); padding: 1px 7px; border-radius: 999px; }
+.brain-mcp-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: #b8b8b6; }
+.brain-mcp-dot.ok { background: #2e9e5b; box-shadow: 0 0 0 3px rgba(46,158,91,0.16); }
+.brain-mcp-dot.bad { background: #d6453b; box-shadow: 0 0 0 3px rgba(214,69,59,0.14); }
+.brain-mcp-dot.idle { background: #b8b8b6; }
+.brain-mcp-row-ctl { display: flex; align-items: center; gap: 8px; flex: none; }
+.brain-mcp-chk { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--fg-muted, #8a8a8a); cursor: pointer; }
+.brain-mcp-chk input { accent-color: var(--pp-ws-accent, #2f6df6); }
+.brain-mcp-mini {
+    width: 26px; height: 26px; border-radius: 7px; cursor: pointer; font-size: 13px;
+    border: 1px solid var(--pp-line, #e2e2e0); background: var(--pp-ws-bg, #fff); color: var(--pp-ws-text);
+    -webkit-app-region: no-drag; transition: background 0.12s;
+}
+.brain-mcp-mini:hover { background: var(--pp-ws-hover, #f4f4f2); }
+.brain-mcp-mini.danger:hover { background: rgba(214,69,59,0.1); color: #c0392b; border-color: rgba(214,69,59,0.3); }
+.brain-mcp-add { border-top: 1px solid var(--pp-line, #eee); padding-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.brain-mcp-seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 9px; background: var(--pp-ws-hover, #f3f3f1); align-self: flex-start; }
+.brain-mcp-segbtn {
+    padding: 6px 12px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer;
+    border: none; background: transparent; color: var(--fg-muted, #8a8a8a); -webkit-app-region: no-drag; transition: all 0.12s;
+}
+.brain-mcp-segbtn.sel { background: var(--pp-ws-bg, #fff); color: var(--pp-ws-text); box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+.brain-mcp-form { display: flex; flex-direction: column; gap: 8px; }
+.brain-mcp-in {
+    width: 100%; padding: 9px 11px; border-radius: 8px; font: inherit; font-size: 12.5px;
+    border: 1px solid var(--pp-line, #ddd); background: var(--pp-ws-bg, #fff); color: var(--pp-ws-text);
+    resize: vertical; box-sizing: border-box;
+}
+textarea.brain-mcp-in { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.45; }
+.brain-mcp-in:focus { outline: none; border-color: var(--pp-ws-accent, #2f6df6); }
+.brain-mcp-msg { font-size: 12px; min-height: 16px; color: var(--fg-muted, #8a8a8a); }
+.brain-mcp-msg.is-ok { color: #2e9e5b; }
+.brain-mcp-msg.is-bad { color: #c0392b; }
+.brain-mcp-addrow { display: flex; align-items: center; gap: 10px; }
+.brain-mcp-test, .brain-mcp-addbtn {
+    padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; -webkit-app-region: no-drag;
+    border: 1px solid var(--pp-line, #ddd); background: var(--pp-ws-bg, #fff); color: var(--pp-ws-text); transition: background 0.12s, filter 0.12s;
+}
+.brain-mcp-test:hover { background: var(--pp-ws-hover, #f4f4f2); }
+.brain-mcp-addbtn { border-color: transparent; background: var(--pp-ws-accent, #2f6df6); color: #fff; }
+.brain-mcp-addbtn:hover { filter: brightness(1.05); }
+
+/* Calendar view — blue primary action + mini-month. */
+.sb-primary {
+    display: flex; align-items: center; gap: 8px; width: calc(100% - 8px);
+    margin: 4px 4px 12px; padding: 7px 12px;
+    background: var(--pp-ws-accent); border: none; border-radius: 999px; cursor: pointer;
+    box-shadow: 0 1px 2px rgba(35,131,226,0.3);
+    font-size: 13.5px; font-weight: 600; color: #fff;
+    -webkit-app-region: no-drag; transition: background 0.12s;
+}
+.sb-primary:hover { background: #1B72CC; }
+.sb-primary svg { width: 16px; height: 16px; flex: none; }
+.sb-mini { padding: 2px 8px 10px; }
+.sb-mini-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.sb-mini-title { font-size: 13px; font-weight: 600; color: var(--pp-ws-text); }
+.sb-mini-nav { display: flex; gap: 2px; }
+.sb-mini-arrow {
+    width: 22px; height: 22px; border-radius: 50%; border: none; background: transparent;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--pp-ws-muted);
+    transition: background 0.12s;
+}
+.sb-mini-arrow:hover { background: var(--pp-ws-hover); }
+.sb-mini-arrow svg { width: 13px; height: 13px; }
+.sb-mini-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; }
+.sb-mini-dow { font-size: 10px; color: #A4A39F; text-align: center; padding: 2px 0; }
+.sb-mini-day {
+    /* Fixed square → border-radius:50% is always a true circle, never an
+       ellipse, regardless of app zoom / text size. */
+    width: 28px; height: 28px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: var(--pp-ws-text); line-height: 1;
+    border-radius: 50%; cursor: pointer; transition: background 0.12s;
+}
+.sb-mini-day:hover:not(.sb-mini-empty) { background: var(--pp-ws-hover); }
+.sb-mini-day.is-today { background: var(--pp-ws-accent); color: #fff; font-weight: 600; }
+.sb-mini-empty { cursor: default; }
+
+/* Footer — global "New chat" pill + round compose, exactly as the design. */
+.sidebar-bottom {
+    display: flex; flex-direction: column; gap: 8px;
+    border-top: 1px solid var(--pp-ws-line) !important;
+    padding: 8px 10px !important;
+}
+.ws-foot-row { display: flex; align-items: center; gap: 8px; }
+.ws-newchat {
+    flex: 1; display: flex; align-items: center; gap: 8px;
+    padding: 8px 13px;
+    background: var(--pp-ws-card); border: 1px solid #E4E4E2;
+    border-radius: 999px; cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    color: var(--pp-ws-faint);
+    -webkit-app-region: no-drag; transition: background 0.12s;
+}
+.ws-newchat:hover { background: #FBFBFA; }
+.ws-newchat .ws-newchat__icon { width: 16px; height: 16px; flex: none; }
+.ws-newchat .ws-newchat__label {
+    flex: 1; text-align: left;
+    font-size: 13.5px; font-weight: 500; color: var(--pp-ws-text);
+}
+.ws-compose {
+    width: 38px; height: 38px; flex: none; border-radius: 50%;
+    background: var(--pp-ws-card); border: 1px solid #E4E4E2; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04); color: var(--pp-ws-faint);
+    -webkit-app-region: no-drag; transition: background 0.12s;
+}
+.ws-compose:hover { background: #FBFBFA; }
+.ws-compose svg { width: 16px; height: 16px; }
+
+/* Workspace switcher lives in the top bar, pinned to the very top. The bar's
+   left inset clears the macOS traffic lights (and collapses in fullscreen).
+   This removes the empty strip that used to sit above the switcher. */
+#sidebar .sidebar-header-area {
+    height: 44px;
+    gap: 4px;
+    padding-left: 74px;            /* clear the traffic lights (x:18) */
+    align-items: center;
+}
+body.is-fullscreen #sidebar .sidebar-header-area { padding-left: 10px !important; }
+#sidebar .sidebar-header-area .ws-switcher { flex: 1; min-width: 0; margin: 0; }
+#sidebar .sidebar-header-area .sidebar-toggle-inner { flex: none; }
+/* Nav list now holds only the app rail → tighten its top padding. */
+#sidebar .sidebar-nav-list { padding: 2px 8px 8px !important; }
+
+/* ============================================================
+   AI Dock — Company Brain docked on the right (Workspace Shell
+   design: 392px white aside, border-left, blue composer).
+   ============================================================ */
+.ai-dock {
+    width: 392px; flex: none; height: 100%;
+    background: #fff; border-left: 1px solid #EAEAE8;
+    display: flex; flex-direction: column; overflow: hidden;
+    transition: width 0.18s ease;
+}
+.ai-dock[data-open="false"] {
+    width: 0; border-left-color: transparent; pointer-events: none;
+}
+.ai-dock-top {
+    flex: none; height: 44px; display: flex; align-items: center;
+    padding: 0 8px 0 14px; gap: 4px;
+}
+.ai-dock-newchat {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 9px; border-radius: 999px; border: none; background: transparent;
+    font: inherit; font-size: 13.5px; font-weight: 600; color: #37352F;
+    cursor: pointer; white-space: nowrap;
+}
+.ai-dock-newchat:hover { background: #EFEFEE; }
+.ai-dock-top-spacer { flex: 1; }
+.ai-dock-iconbtn {
+    width: 30px; height: 30px; border: none; background: transparent;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    color: #5F5E5B; cursor: pointer; flex: none;
+}
+.ai-dock-iconbtn:hover { background: #EFEFEE; }
+
+.ai-dock-body {
+    flex: 1; min-height: 0; overflow-y: auto;
+    display: flex; flex-direction: column; padding: 18px 18px 8px;
+}
+.ai-dock-welcome { margin-top: auto; }   /* bottom-aligned like the design */
+.ai-dock-welcome-mark {
+    width: 50px; height: 50px; border-radius: 50%;
+    background: #F1F1EF; border: 1px solid #E8E8E5;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 16px;
+}
+.ai-dock-welcome h2 { font-size: 20px; font-weight: 600; color: #37352F; margin: 0 0 12px; }
+.ai-dock-welcome p { font-size: 14px; line-height: 1.55; color: #5F5E5B; margin: 0; }
+
+.ai-dock-msg { margin-bottom: 16px; max-width: 100%; }
+.ai-dock-msg--user { align-self: flex-end; max-width: 88%; }
+.ai-dock-msg--user .ai-dock-msg-body {
+    background: #F1F1EF; color: #37352F; border-radius: 14px;
+    padding: 9px 13px; font-size: 14px; line-height: 1.5; white-space: pre-wrap;
+}
+.ai-dock-msg--assistant .ai-dock-msg-body { color: #37352F; font-size: 14px; line-height: 1.6; }
+.ai-dock-msg--assistant .ai-dock-msg-body > *:first-child { margin-top: 0; }
+.ai-dock-msg--assistant .ai-dock-msg-body > *:last-child { margin-bottom: 0; }
+.ai-dock-thinking { color: #9B9A97; font-style: italic; }
+
+.ai-dock-composer-wrap { flex: none; padding: 0 16px 16px; }
+.ai-dock-composer {
+    position: relative;
+    border: 1.5px solid #2383E2; border-radius: 16px;
+    padding: 11px 12px 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); background: #fff;
+}
+.ai-dock-composer textarea {
+    width: 100%; border: none; outline: none; resize: none; font-family: inherit;
+    font-size: 14px; line-height: 1.5; color: #37352F; background: transparent;
+    min-height: 24px; max-height: 160px; display: block;
+}
+.ai-dock-composer textarea::placeholder { color: #9B9A97; }
+.ai-dock-composer-row { display: flex; align-items: center; gap: 4px; margin-top: 6px; }
+.ai-dock-composer-spacer { flex: 1; }
+.ai-dock-send {
+    width: 28px; height: 28px; border: none; border-radius: 50%;
+    background: #2383E2; color: #fff; cursor: pointer; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.12s;
+}
+.ai-dock-send:hover { background: #1B72CC; }
+.ai-dock-send:disabled { background: #E5E5E2; color: #B8B8B5; cursor: default; }
+
+/* Editor-header toggle button: active = blue tint (design accent). */
+.ai-dock-toggle.is-active { background: #E8F0FB; }
+.ai-dock-toggle.is-active svg path { fill: #2383E2; }
+
+/* ===== Tabs — align to the design palette (subtle, cool). ===== */
+.tabs-header { background: #F7F7F5; border-bottom: 1px solid #EAEAE8; }
+.tab { color: #787774; }
+.tab:hover { background: #EFEFEE; }
+.tab.active { background: #fff; color: #37352F; }
+.tab.active::after { background: #fff; }
+
+/* ── Resizable panes (Workspace Shell parity) ───────────────────────────── */
+#sidebar { position: relative; }
+.sidebar-resizer {
+    position: absolute; top: 0; right: -3px; width: 7px; height: 100%;
+    cursor: col-resize; z-index: 6000;
+}
+.sidebar-resizer::after {
+    content: ''; position: absolute; top: 0; left: 3px; width: 2px; height: 100%;
+    background: #2383E2; opacity: 0; transition: opacity 0.12s;
+}
+.sidebar-resizer:hover::after { opacity: 0.55; }
+body.sidebar-resizing { cursor: col-resize; user-select: none; }
+body.sidebar-resizing aside { transition: none !important; }
+body.sidebar-resizing .sidebar-resizer::after { opacity: 0.7; }
+
+.ai-dock { position: relative; min-width: 0; max-width: none; }
+/* Hit area sits fully INSIDE the dock (it has overflow:hidden, which would clip a
+   protruding handle) and is wide enough to grab; it overlays only left padding,
+   so it blocks no controls. */
+.ai-dock-resizer {
+    position: absolute; top: 0; left: 0; width: 12px; height: 100%;
+    cursor: col-resize; z-index: 6000;
+}
+.ai-dock-resizer::after {
+    content: ''; position: absolute; top: 0; left: 0; width: 2px; height: 100%;
+    background: #2383E2; opacity: 0; transition: opacity 0.12s;
+}
+.ai-dock-resizer:hover::after { opacity: 0.55; }
+.ai-dock[data-open="false"] .ai-dock-resizer { display: none; }
+body.ai-dock-resizing { cursor: col-resize; user-select: none; }
+body.ai-dock-resizing .ai-dock { transition: none !important; }
+body.ai-dock-resizing .ai-dock-resizer::after { opacity: 0.7; }
+
+/* ── AI dock composer toolbar (attach · model · send) ───────────────────── */
+.ai-dock-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+.ai-dock-chips:empty { display: none; }
+.ai-dock-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: #F1F1EF; border-radius: 999px; padding: 3px 9px;
+    font-size: 12.5px; color: #5F5E5B; font-weight: 500; max-width: 100%;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ai-dock-chip--doc { background: #E8F0FB; color: #1B72CC; }
+.ai-dock-chip-x { cursor: pointer; color: #9B9A97; font-size: 11px; }
+.ai-dock-chip-x:hover { color: #37352F; }
+.ai-dock-tool {
+    width: 28px; height: 28px; border: none; background: transparent; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; color: #5F5E5B; cursor: pointer; flex: none;
+}
+.ai-dock-tool:hover { background: #EFEFEE; color: #37352F; }
+.ai-dock-composer-spacer { flex: 1 1 auto; }
+.ai-dock-model {
+    display: inline-flex; align-items: center; gap: 4px; border: none; background: transparent;
+    border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 13px; color: #5F5E5B;
+    cursor: pointer; flex: none; max-width: 150px;
+}
+.ai-dock-model #ai-dock-model-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-dock-model:hover { background: #EFEFEE; color: #37352F; }
+.ai-dock-model svg { flex: none; }
+.ai-dock-model-menu {
+    position: absolute; right: 10px; bottom: 48px; z-index: 7000;
+    background: #fff; border: 1px solid #E5E5E2; border-radius: 10px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.12); padding: 4px; min-width: 190px;
+    max-height: 280px; overflow-y: auto;
+}
+.ai-dock-model-opt {
+    display: block; width: 100%; text-align: left; border: none; background: transparent;
+    padding: 7px 10px; border-radius: 7px; font: inherit; font-size: 13px; color: #37352F;
+    cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ai-dock-model-opt:hover { background: #F1F1EF; }
+.ai-dock-model-opt.is-on { color: #2383E2; font-weight: 600; }
+.ai-dock-thinking { color: #9B9A97; }
+
+/* ============================================================================
+   Company Brain — Chat view: Notion-AI fidelity pass
+   Empty state floats the composer in a centered hero (heading · composer · two
+   columns); the composer DOM-hops to the bottom once a conversation starts.
+   Plus composer interactive states (attachment previews · active/stop send),
+   the "Crafting…" line, and a copy/feedback row under each answer.
+   Appended last so it layers over every earlier Brain pass.
+   ========================================================================== */
+
+/* ── Empty-state hero ──────────────────────────────────────────────────────── */
+/* Solid heading (drop the earlier gradient fill) to match Notion AI. */
+.brain-welcome-title {
+  background: none; -webkit-background-clip: border-box; background-clip: border-box;
+  -webkit-text-fill-color: currentColor; color: #1f1f1f;
+}
+/* The composer docks here, centered under the heading. */
+.brain-hero-slot { width: 100%; display: flex; justify-content: center; margin: 10px 0 40px; }
+.brain-input-wrapper.is-hero { padding: 0 !important; border-top: none !important; width: 100%; }
+/* In the hero, the card must align edge-to-edge with the Recent/Suggested
+   columns below it (both 720px) — the base card caps at 760 and would otherwise
+   overhang ~20px each side. Also give it real height so it reads as a generous
+   composer (Notion-style), not a thin single-line bar. */
+.brain-input-wrapper.is-hero .brain-composer-card {
+  width: 100%; max-width: 100%;
+  padding: 16px 16px 12px; box-shadow: 0 10px 34px rgba(0, 0, 0, 0.09);
+}
+.brain-input-wrapper.is-hero .brain-composer-card textarea { min-height: 46px; padding-top: 6px; }
+
+/* ── Composer: attachment previews now live INSIDE the card ─────────────────── */
+.brain-composer-card .brain-attachments { margin: 2px 2px 8px; }
+/* Image attachments → clean rounded previews with a corner ✕ (no filename pill). */
+.brain-attach-chip.kind-image {
+  position: relative; padding: 0; border: none; background: transparent; max-width: none;
+}
+.brain-attach-chip.kind-image .brain-attach-name { display: none; }
+.brain-attach-chip.kind-image .brain-attach-thumb {
+  width: 56px; height: 56px; border-radius: 10px; border: 1px solid #ececec;
+}
+.brain-attach-chip.kind-image .brain-attach-x {
+  position: absolute; top: -6px; right: -6px; width: 18px; height: 18px;
+  background: #1a1a1a; color: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+}
+.brain-attach-chip.kind-image .brain-attach-x:hover { background: #000; color: #fff; }
+
+/* ── Send button: muted → accent when there's input → dark square while streaming ─ */
+.brain-input-wrapper .brain-send-btn {
+  background: #ececec !important; color: #b4b4b4 !important;
+  transition: background .15s, color .15s;
+}
+.brain-input-wrapper .brain-send-btn.is-active { background: #2383e2 !important; color: #fff !important; }
+.brain-input-wrapper .brain-send-btn.is-active:hover { background: #1b6fc4 !important; }
+.brain-input-wrapper .brain-send-btn.is-stop { background: #1a1a1a !important; color: #fff !important; }
+.brain-input-wrapper .brain-send-btn.is-stop:hover { background: #000 !important; }
+
+/* ── "Crafting…" line shown above an answer until tokens stream in ──────────── */
+.brain-crafting { display: inline-flex; align-items: center; gap: 8px; color: #9a9a97; font-size: 13px; padding: 2px 0; }
+.brain-crafting .thinking-label { font-style: normal; }
+.brain-crafting-dot {
+  width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0;
+  border: 2px solid #e2e2e0; border-top-color: #9a9a97;
+  animation: brain-craft-spin .7s linear infinite;
+}
+@keyframes brain-craft-spin { to { transform: rotate(360deg); } }
+
+/* ── Answer actions: copy · 👍 · 👎 under a finished assistant answer ────────── */
+.brain-msg-actions { display: flex; align-items: center; gap: 2px; margin-top: 10px; margin-left: -6px; }
+.brain-msg-actions .bma-btn {
+  border: none; background: transparent; color: #b3b3af; cursor: pointer;
+  width: 30px; height: 30px; border-radius: 8px; display: inline-flex;
+  align-items: center; justify-content: center; font-size: 13.5px;
+  transition: background .12s, color .12s;
+}
+.brain-msg-actions .bma-btn:hover { background: #f1f1ef; color: #555; }
+.brain-msg-actions .bma-btn.on { color: #2383e2; }
+
+/* ── User message: stack image previews ABOVE the grey bubble, right-aligned ── */
+.brain-message.msg-user { flex-direction: column; align-items: flex-end; gap: 6px; }
+.brain-message.msg-user .brain-msg-attachments { margin: 0; justify-content: flex-end; }
+.brain-message.msg-user .brain-msg-attach.kind-image {
+  padding: 0; border: none; background: transparent; max-width: none;
+}
+.brain-message.msg-user .brain-msg-attach.kind-image .brain-attach-name { display: none; }
+.brain-message.msg-user .brain-msg-attach.kind-image .brain-attach-thumb {
+  width: 132px; height: auto; max-height: 150px; border-radius: 12px; border: 1px solid #ececec;
+}
+
+/* ── Breadcrumb-style topbar title (active conversation name) ───────────────── */
+.brain-title span { max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -1,11 +1,14 @@
 import './style.css'
+// Dark palette overrides — MUST come after style.css so its
+// :root[data-theme="dark"] rules win the cascade. theme.applyStoredTheme()
+// (called below, before first paint) sets data-theme on <html>.
+import './theme-dark.css'
 import './plugins/plugins.css'
+import { applyStoredTheme, getThemePreference, setTheme } from './theme'
 import Store from './store'
 import { Features } from './features'
 import { initPluginSystem } from './plugins/plugin-host'
-import { createPluginLab } from './plugins/plugin-lab'
-import { createPluginStudio } from './plugins/studio/plugin-studio'
-import './plugins/studio/studio.css'
+import { openPluginSettings } from './plugins/plugin-settings'
 import { HistoryManager } from './history'
 import { PropertiesManager } from './properties'
 import { ContextMenu } from './context-menu'
@@ -45,13 +48,28 @@ import {
 import { identity } from './identity'
 import { contactStore, startInbox, getReceivedOffers, removeReceivedOffer } from './contacts'
 import { syncDotColor, syncDotTitle, openSyncPopover } from './cloud-sync'
+import { openServerDialog, flashConnectToastIfPending } from './server-config'
 import { applyEditorFont, loadEditorFont } from './fonts'
 import { CompanyBrainCenter } from './brain-drawer'
-import { initReminderWatcher } from './cm-mention'
+import { AIDock } from './ai-dock'
+import { sparkIcon } from './brain-service-logos'
+import { maybeShowOnboarding } from './onboarding'
+import { initReminderWatcher, parseISODate, formatDateLabel } from './cm-mention'
+import { GraphView } from './graph-view'
+import { todayISO, buildDailyNoteBody, findNoteByTitle } from './daily-notes'
+import { mountReactSurface, unmountReactSurface } from './react/mount'
+import { buildHostBridge } from './react/host-bridge'
+import { taskScan } from './task-scan'
+import { inboxStore } from './inbox-store'
+import { toggleFocusMode } from './cm-focus'
 import { yCollab } from 'y-codemirror.next'
 import { EditorView } from '@codemirror/view'
 import { syntaxTree } from '@codemirror/language'
 import { EditorState } from '@codemirror/state'
+
+// Apply the persisted theme (light/dark/system) to <html> BEFORE first paint so
+// there's no light flash on launch. Runs synchronously as the module loads.
+applyStoredTheme()
 
 // DEBUG: Verify script execution
 console.log('Main JS executing...')
@@ -94,6 +112,7 @@ let contextMenu
 let indexer
 let cmdPalette
 let companyBrainCenter
+let aiDock = null // Company Brain docked as a right-hand panel
 let docEngine // Active DocumentEngine
 let projectionManager // Active Projection
 
@@ -111,6 +130,7 @@ let importManager = null // Import popover (CSV -> database / Markdown -> note)
 let trashManager = null // Soft-delete / Trash view manager
 let teamspacesManager = null // Local-first teamspaces (sidebar groupings)
 let p2pTeamManager = null // Zero-account, pure-P2P teams (synced workspaces)
+let graphView = null // Lazy GraphView overlay (force-directed map of notes)
 window.isUpdatingFromYjs = false // Global mutex for Projection safety
 
 let newTabModal
@@ -121,10 +141,7 @@ let e2eeReadOnlyLocked = false
 
 // ── Plugin system (gated by Features.plugins; all access defensive) ──────────
 let pluginController = null // controller from initPluginSystem(hostHooks)
-let pluginLab = null // Plugin Lab UI (lazy-mounted into #plugin-lab-view)
-let pluginLabMounted = false
-let pluginStudio = null // Plugin Studio UI (lazy-mounted into #plugin-studio-view; behind Features.pluginStudio)
-let pluginStudioMounted = false
+let reactHost = null // shared host bridge for React-island surfaces (built once, lazily)
 // Last editor bind args, so the host can trigger a rebindEditor() when a plugin
 // (de)registers an editor extension that must apply to the already-open doc.
 let currentYText = null
@@ -650,86 +667,126 @@ app.innerHTML = `
   <div class="window-layout">
     <div class="wrapper">
         <aside id="sidebar">
-          <div class="sidebar-header-area" style="height: 32px;">
-             <!-- Drag region + Traffic Lights space -->
-             <button class="icon-btn sidebar-toggle-inner" id="sidebar-collapse-btn" title="Close Sidebar" style="margin-left: auto;">
+          <div class="sidebar-header-area">
+             <!-- Top bar: workspace switcher pinned to the very top (cleared past
+                  the traffic lights) + the collapse toggle. The empty space drags. -->
+             <div class="ws-switcher" id="account-btn">
+                <div class="workspace-icon" id="workspace-icon">P</div>
+                <span id="workspace-label" class="ws-name">Personal</span>
+                <svg class="ws-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M7 10l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+             </div>
+             <button class="icon-btn sidebar-toggle-inner" id="sidebar-collapse-btn" title="Close Sidebar">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                     <line x1="9" y1="3" x2="9" y2="21"></line>
                 </svg>
              </button>
           </div>
-          
+
           <div class="sidebar-nav-list">
-             <div class="sidebar-item" id="account-btn">
-                <div class="workspace-icon" id="workspace-icon">P</div>
-                <span id="workspace-label" style="font-weight: 600; color: #333;">Personal</span>
-                <i class="fas fa-chevron-circle-down" style="font-size: 10px; color: #c4c4c4; margin-left: auto;"></i>
-             </div>
-             
-             <div class="sidebar-item" id="search-btn">
-                <i class="fas fa-search"></i> Search
-             </div>
-             ${ENABLE_AI_HOME ? `
-             <div class="sidebar-item" id="home-btn">
-                 <i class="fas fa-home"></i> Home
-             </div>
-             ` : ''}
-             <div class="sidebar-item" id="brain-btn">
-                 <i class="fas fa-brain"></i> Company Brain
-             </div>
-             <div class="sidebar-item" id="plugin-lab-btn">
-                 <i class="fas fa-flask"></i> Plugin Lab
-             </div>
-             <div class="sidebar-item" id="plugin-studio-btn" style="display: none;">
-                 <i class="fas fa-wand-magic-sparkles"></i> Plugin Studio
-             </div>
-             <div class="sidebar-item" id="inbox-btn">
-                 <i class="fas fa-inbox"></i> Inbox
+             <!-- App rail: Home / Chat / Calendar / Inbox + Search. The active app
+                  expands to its label; clicking swaps the contextual nav below. -->
+             <div class="appnav" id="appnav">
+                <button class="appnav-btn is-active" id="home-btn" data-view="home" title="Home"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11l8-6 8 6M6 10v8a1 1 0 001 1h10a1 1 0 001-1v-8M10 19v-5h4v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="appnav-label">Home</span></button>
+                <button class="appnav-btn" id="chat-btn" data-view="chat" title="Chat — Company Brain"><svg viewBox="0 0 24 24" fill="none"><path d="M5 7a2 2 0 012-2h10a2 2 0 012 2v6a2 2 0 01-2 2H9l-4 3z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg><span class="appnav-label">Chat</span></button>
+                <button class="appnav-btn" id="calendar-btn" data-view="calendar" title="Calendar — daily notes, due dates & reminders"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="15" rx="2.5" stroke="currentColor" stroke-width="1.7"/><path d="M4 9.5h16M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span class="appnav-label">Calendar</span></button>
+                <button class="appnav-btn" id="email-btn" data-view="inbox" title="Inbox — Mail"><svg viewBox="0 0 24 24" fill="none"><path d="M4 13l2-7h12l2 7v4a1 1 0 01-1 1H5a1 1 0 01-1-1z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M4 13h4l1 2h6l1-2h4" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg><span class="appnav-label">Inbox</span></button>
+                <div class="appnav-spacer"></div>
+                <button class="appnav-btn appnav-btn--ghost" id="search-btn" title="Search (⌘K)"><svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.7"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>
              </div>
           </div>
-          
+
           <div class="sidebar-content" id="sidebar-scroll-area">
-             <!-- Private Section -->
-             <div class="sidebar-section">
-                 <div class="sidebar-section-header">
-                     <span>Private</span>
-                     <div style="display: flex; gap: 4px;">
-                        <i class="fas fa-folder-plus icon-btn" id="add-folder-btn" title="Open Local Folder" style="font-size: 12px; cursor: pointer; opacity: 0.6; transition: opacity 0.2s;"></i>
-                        <i class="fas fa-file-import icon-btn" id="import-btn" title="Import Files" style="font-size: 12px; cursor: pointer; opacity: 0.6; transition: opacity 0.2s;"></i>
-                        <i class="fas fa-plus icon-btn" id="add-btn" title="Add Page" style="font-size: 12px; cursor: pointer; opacity: 0.6; transition: opacity 0.2s;"></i>
+
+             <!-- ===== HOME VIEW ===== -->
+             <div class="sb-view" id="sb-view-home">
+                 <!-- Private Section -->
+                 <div class="sidebar-section">
+                     <div class="sidebar-section-header">
+                         <span>Private</span>
+                         <div class="shdr-actions">
+                            <i class="fas fa-folder-plus icon-btn" id="add-folder-btn" title="Open Local Folder"></i>
+                            <i class="fas fa-file-import icon-btn" id="import-btn" title="Import Files"></i>
+                            <i class="fas fa-plus icon-btn" id="add-btn" title="Add Page"></i>
+                         </div>
                      </div>
+                     <div id="file-tree" class="file-tree"></div>
                  </div>
-                 <div id="file-tree" class="file-tree"></div>
-             </div>
-             
-             <!-- P2P Teams Section -->
-             <div class="sidebar-section" id="teamspaces-section">
-                 <div class="sidebar-section-header">
-                    <span>Teams</span>
-                    <div style="display: flex; gap: 4px;">
-                       <i class="fas fa-mobile-alt icon-btn" id="link-device-btn" title="Link a device" style="font-size: 12px; cursor: pointer; opacity: 0.6; transition: opacity 0.2s;"></i>
-                       <i class="fas fa-link icon-btn" id="join-team-btn" title="Join a team" style="font-size: 12px; cursor: pointer; opacity: 0.6; transition: opacity 0.2s;"></i>
-                       <i class="fas fa-plus icon-btn" id="create-team-btn" title="Create a team" style="font-size: 12px; cursor: pointer; opacity: 0.6; transition: opacity 0.2s;"></i>
-                    </div>
+
+                 <!-- Teamspaces Section -->
+                 <div class="sidebar-section" id="teamspaces-section">
+                     <div class="sidebar-section-header">
+                        <span>Teamspaces</span>
+                        <div class="shdr-actions">
+                           <i class="fas fa-server icon-btn" id="team-server-btn" title="Connect to your team's server"></i>
+                           <i class="fas fa-mobile-alt icon-btn" id="link-device-btn" title="Link a device"></i>
+                           <i class="fas fa-link icon-btn" id="join-team-btn" title="Join a team"></i>
+                           <i class="fas fa-plus icon-btn" id="create-team-btn" title="Create a team"></i>
+                        </div>
+                     </div>
+                     <div id="teamspaces-list"></div>
                  </div>
-                 <div id="teamspaces-list"></div>
+
+                 <!-- Shared Section -->
+                 <div class="sidebar-section" id="shared-section">
+                     <div class="sidebar-section-header">Shared</div>
+                     <div id="shared-list"></div>
+                 </div>
+
+                 <!-- Apps -->
+                 <div class="sidebar-section">
+                     <div class="sidebar-section-header">Apps</div>
+                     <button class="sb-app-row" id="tasks-btn" title="Tasks — every checkbox across your notes"><span class="sb-folder-ic"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="4" stroke="currentColor" stroke-width="1.7"/><path d="M8.5 12l2.4 2.4L15.5 9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Tasks</span></button>
+                     <button class="sb-app-row" id="graph-btn" title="Graph view (⌘⇧G)"><span class="sb-folder-ic"><svg viewBox="0 0 24 24" fill="none"><circle cx="5.5" cy="6" r="2" stroke="currentColor" stroke-width="1.7"/><circle cx="18.5" cy="6" r="2" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="18" r="2" stroke="currentColor" stroke-width="1.7"/><path d="M7.3 7.2l3.4 8.8M16.7 7.2l-3.4 8.8M7.5 6h9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span><span>Graph</span></button>
+                     <button class="sb-app-row" id="inbox-btn" title="Notifications"><span class="sb-folder-ic"><svg viewBox="0 0 24 24" fill="none"><path d="M6 9.5a6 6 0 0112 0c0 4.5 2 5.5 2 5.5H4s2-1 2-5.5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M10 19a2 2 0 004 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span><span>Notifications</span><span class="utility-badge" id="inbox-unread-badge" style="display:none;"></span></button>
+                     <button class="sb-app-row" id="trash-btn" title="Trash"><span class="sb-folder-ic"><svg viewBox="0 0 24 24" fill="none"><path d="M5 7h14M9 7V5h6v2M6 7l1 13h10l1-13" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span><span>Trash</span></button>
+                 </div>
              </div>
-             
-             <!-- Shared Section -->
-             <div class="sidebar-section" id="shared-section">
-                 <div class="sidebar-section-header">Shared</div>
-                 <div id="shared-list"></div>
+
+             <!-- ===== CHAT VIEW ===== -->
+             <div class="sb-view" id="sb-view-chat" style="display:none;">
+                 <button class="sb-primary" id="chat-new-thread" title="Start a new chat"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>New chat</span></button>
+                 <div class="sidebar-section-header">Agents</div>
+                 <div id="sb-agents-row" class="sb-agents"></div>
+                 <div id="sb-chat-recent"><div class="sb-empty">Your chats will appear here.</div></div>
              </div>
-             
+
+             <!-- ===== CALENDAR VIEW ===== -->
+             <div class="sb-view" id="sb-view-calendar" style="display:none;">
+                 <button class="sb-primary" id="cal-new-event"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>New event</span></button>
+                 <div class="sb-mini" id="sb-cal-mini"></div>
+                 <div class="sidebar-section-header">My calendars</div>
+                 <button class="sb-cal-row" id="cal-daily"><span class="sb-dot" style="background:#2383E2"></span><span>Daily notes</span></button>
+                 <button class="sb-cal-row" id="cal-due"><span class="sb-dot" style="background:#5B9A6B"></span><span>Tasks &amp; due dates</span></button>
+                 <!-- Connected CalDAV calendars (painted by renderCalendarNav from
+                      calendar:calendars; visibility toggles via calendar:calendarSetVisible). -->
+                 <div id="sb-cal-connected"></div>
+                 <div class="sb-mail-sep"></div>
+                 <button class="sb-cal-row" id="cal-add-account"><span class="sb-folder-ic"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span><span>Add calendar account</span></button>
+             </div>
+
+             <!-- ===== INBOX (MAIL) VIEW ===== -->
+             <!-- Painted by renderMailNav() from the Email surface's published
+                  email:nav-state (accounts + folders). Clicks dispatch email:cmd
+                  back to the surface — one sidebar, no second folder rail. -->
+             <div class="sb-view" id="sb-view-inbox" style="display:none;">
+                 <div id="sb-mail-nav"></div>
+             </div>
+
              <!-- Hidden Views -->
              <div id="search-view" style="display: none;"></div>
              <div id="profile-view" style="display: none;"></div>
           </div>
-          
+
           <div class="sidebar-bottom">
-              <div class="sidebar-item" id="trash-btn">
-                  <i class="fas fa-trash"></i> Trash
+              <div class="ws-foot-row">
+                  <button class="ws-newchat" id="newchat-btn" title="New chat — Company Brain">
+                      <svg class="ws-newchat__icon" viewBox="0 0 24 24" fill="none"><path d="M5 8c1-2 3-3 5-2M12 4c4 0 7 3 7 7 0 4-3 7-7 7-1 0-2 0-3-1l-4 1 1-4c-1-1-1-2-1-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                      <span class="ws-newchat__label">New chat</span>
+                  </button>
+                  <button class="ws-compose" id="sidebar-compose-btn" title="New page">
+                      <svg viewBox="0 0 24 24" fill="none"><path d="M4 20l3.5-1L18 8.5 15.5 6 5 16.5 4 20z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 7.5L16.5 10" stroke="currentColor" stroke-width="1.6"/></svg>
+                  </button>
               </div>
           </div>
         </aside>
@@ -765,6 +822,9 @@ app.innerHTML = `
            </div>
         </div>
         <div class="header-right" id="header-right" style="display: flex; align-items: center; gap: 4px;">
+            <button class="icon-btn ai-dock-toggle" id="ai-dock-toggle" title="Ask AI  (⌘J)" aria-label="Ask AI">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.9 5.6a3 3 0 001.5 1.5L21 12l-5.6 1.9a3 3 0 00-1.5 1.5L12 21l-1.9-5.6a3 3 0 00-1.5-1.5L3 12l5.6-1.9a3 3 0 001.5-1.5L12 3z" fill="currentColor"/></svg>
+            </button>
             <span id="edit-status" style="font-size: 13px; color: #999; margin-right: 4px;"></span>
             <div id="presence-avatars" class="presence-avatars"></div>
             <!-- Share button will be inserted here -->
@@ -777,11 +837,11 @@ app.innerHTML = `
         <!-- Dedicated Company Brain View -->
         <div id="brain-view" style="display: none;"></div>
 
-        <!-- Plugin Lab view (sandboxed plugin manager / author console) -->
-        <div id="plugin-lab-view" style="display: none;"></div>
-
-        <!-- Plugin Studio view (agentic plugin builder; behind Features.pluginStudio) -->
-        <div id="plugin-studio-view" style="display: none;"></div>
+        <!-- React-island surfaces (Tasks / Calendar / Inbox / Email). Mounted lazily. -->
+        <div id="tasks-view" style="display: none;"></div>
+        <div id="calendar-view" style="display: none;"></div>
+        <div id="inbox-view" style="display: none;"></div>
+        <div id="email-view" style="display: none;"></div>
 
         <div class="editor-container" style="position: relative;">
           <!-- Title removed from here -->
@@ -802,6 +862,40 @@ app.innerHTML = `
   </div>
 </div>
 `
+
+/* Drag-resize the sidebar from its right edge (width persisted, like the
+   Workspace Shell's resizable panes). Double-click resets to the default. */
+function setupSidebarResizer() {
+    const sidebar = document.getElementById('sidebar')
+    if (!sidebar || sidebar.querySelector('.sidebar-resizer')) return
+    const KEY = 'paperus_sidebar_w'; const MIN = 200; const MAX = 460; const DEF = 240
+    const clamp = (n) => Math.max(MIN, Math.min(MAX, Math.round(n)))
+    const apply = (w) => { sidebar.style.width = `${w}px`; sidebar.style.minWidth = `${w}px`; sidebar.style.maxWidth = `${w}px` }
+    let saved = 0
+    try { saved = parseInt(localStorage.getItem(KEY), 10) } catch { /* noop */ }
+    if (saved >= MIN && saved <= MAX) apply(saved)
+    const handle = document.createElement('div')
+    handle.className = 'sidebar-resizer'
+    handle.title = 'Drag to resize · double-click to reset'
+    sidebar.appendChild(handle)
+    let startX = 0; let startW = 0
+    const onMove = (e) => apply(clamp(startW + (e.clientX - startX)))
+    const onUp = () => {
+        document.removeEventListener('mousemove', onMove)
+        document.removeEventListener('mouseup', onUp)
+        document.body.classList.remove('sidebar-resizing')
+        try { localStorage.setItem(KEY, String(parseInt(sidebar.style.width, 10) || DEF)) } catch { /* noop */ }
+    }
+    handle.addEventListener('mousedown', (e) => {
+        if (sidebar.classList.contains('collapsed')) return
+        e.preventDefault()
+        startX = e.clientX; startW = sidebar.offsetWidth
+        document.body.classList.add('sidebar-resizing')
+        document.addEventListener('mousemove', onMove)
+        document.addEventListener('mouseup', onUp)
+    })
+    handle.addEventListener('dblclick', () => { apply(DEF); try { localStorage.setItem(KEY, String(DEF)) } catch { /* noop */ } })
+}
 
 async function updateVisibilityStatus() {
     const badge = document.getElementById('visibility-badge')
@@ -1268,25 +1362,10 @@ async function initPlugins() {
             } catch { /* noop */ }
         })
 
-        // Construct the Plugin Lab (idempotent; mounts lazily on first show).
-        try {
-            pluginLab = createPluginLab({
-                controller: pluginController,
-                ragEngine: companyBrainCenter ? companyBrainCenter.engine : null,
-            })
-        } catch (e) { console.warn('[plugins] Plugin Lab construction failed:', e) }
-
-        // Construct Plugin Studio (the agentic builder), behind its own flag. It is
-        // web-safe and self-feature-detects the desktop via studioClient; if the flag
-        // is off we never construct it and the view/button stay hidden.
-        if (Features.pluginStudio) {
-            try {
-                pluginStudio = createPluginStudio({
-                    controller: pluginController,
-                    ragEngine: companyBrainCenter ? companyBrainCenter.engine : null,
-                })
-            } catch (e) { console.warn('[plugins] Plugin Studio construction failed:', e) }
-        }
+        // The in-app Plugin Lab / Studio authoring UIs are retired — plugin authoring
+        // now lives in the @paperus/plugin-sdk + the `create-notionless-plugin`
+        // scaffolder, and installed plugins are managed from the account menu ▸
+        // Developer ▸ Plugins… (openPluginSettings). The plugin RUNTIME below stays.
     } catch (e) {
         console.warn('[plugins] plugin system init failed (app continues):', e)
     }
@@ -1300,7 +1379,7 @@ async function initPlugins() {
  * showing the editor).
  */
 function hideContentViews(exceptId) {
-    const ids = ['home-view', 'brain-view', 'plugin-lab-view', 'plugin-studio-view']
+    const ids = ['home-view', 'brain-view', 'tasks-view', 'calendar-view', 'inbox-view', 'email-view']
     for (const id of ids) {
         if (id === exceptId) continue
         const v = document.getElementById(id)
@@ -1318,86 +1397,140 @@ function showPluginView(viewId) {
     if (target) target.style.display = 'flex'
 }
 
-/** Toggle to the Plugin Lab view and (re)mount the lab UI. */
-function showPluginLabPage() {
-    if (!Features.plugins) return
-    try {
-        currentOpenPath = null
-        if (backlinksPanel) backlinksPanel.clear()
-        if (pageHeader) pageHeader.clear()
-
-        const home = document.getElementById('home-view')
-        const brain = document.getElementById('brain-view')
-        const labView = document.getElementById('plugin-lab-view')
-        const editor = document.querySelector('.editor-container')
-        const mainWrapper = document.querySelector('main')
-        const header = document.querySelector('.app-header')
-        const footer = document.querySelector('footer')
-
-        document.querySelectorAll('.tree-item.active, .sidebar-doc-item.active, .sidebar-item.active').forEach(el => el.classList.remove('active'))
-        const labBtn = document.getElementById('plugin-lab-btn')
-        if (labBtn) labBtn.classList.add('active')
-
-        hideContentViews('plugin-lab-view')
-        if (editor) editor.style.display = 'none'
-        if (mainWrapper) mainWrapper.style.display = 'flex'
-        // The Lab is its own full surface — no document header (title/breadcrumb)
-        // and no editor footer (cursor/word-count/clock). hideNoFileSelected
-        // restores both when a note takes over again.
-        if (header) header.style.display = 'none'
-        if (footer) footer.style.display = 'none'
-        if (labView) labView.style.display = 'flex'
-
-        if (pluginLab && labView) {
-            if (!pluginLabMounted) { pluginLab.mount(labView); pluginLabMounted = true }
-            else if (typeof pluginLab.refresh === 'function') pluginLab.refresh()
-            else pluginLab.mount(labView)
-        }
-    } catch (e) { console.warn('[plugins] showPluginLabPage failed:', e) }
+/** Build the shared React-island host bridge once (rag-engine, scan, inbox, nav). */
+function buildReactHost() {
+    return buildHostBridge({
+        api: window.api,
+        identity,
+        tabManager,
+        p2p: p2pTeamManager,
+        openFile: (p) => openFile(p),
+        dates: { parseISODate, formatDateLabel, todayISO },
+        daily: {
+            openDailyNote: (iso) => openDailyNote(iso),
+            openTodaysDailyNote: () => openDailyNote(todayISO()),
+        },
+        scan: {
+            getScan: () => taskScan.getScan(),
+            requestScan: (o) => taskScan.requestScan(o),
+            toggleTask: (t, d) => taskScan.toggleTask(t, d),
+        },
+        inbox: {
+            getItems: () => inboxStore.getItems(),
+            accept: (it) => inboxStore.accept(it),
+            dismiss: (it) => inboxStore.dismiss(it),
+            markAllRead: () => inboxStore.markAllRead(),
+            unreadCount: () => inboxStore.unreadCount(),
+        },
+        events: {
+            create: (payload) => createCalendarEvent(payload),
+        },
+        getBrain: () => (companyBrainCenter ? companyBrainCenter.engine : null),
+        toast: (msg) => flashHint(msg),
+    })
 }
 
-/** Toggle to the Plugin Studio view and (re)mount it. Mirrors showPluginLabPage. */
-function showPluginStudioPage() {
-    if (!Features.pluginStudio) return
+/**
+ * Show one of the React-island surfaces (Tasks / Calendar / Inbox / Email) as a
+ * full content surface, lazily mounting it. Mirrors the old showPlugin*Page flow
+ * (hide editor + document header/footer, show the view), but routes through the
+ * island mount bridge instead of the retired vanilla Lab UIs.
+ */
+function showReactSurfacePage(viewId, surfaceKey) {
     try {
         currentOpenPath = null
         if (backlinksPanel) backlinksPanel.clear()
         if (pageHeader) pageHeader.clear()
 
-        const home = document.getElementById('home-view')
-        const brain = document.getElementById('brain-view')
-        const labView = document.getElementById('plugin-lab-view')
-        const studioView = document.getElementById('plugin-studio-view')
         const editor = document.querySelector('.editor-container')
         const mainWrapper = document.querySelector('main')
         const header = document.querySelector('.app-header')
         const footer = document.querySelector('footer')
+        const target = document.getElementById(viewId)
 
         document.querySelectorAll('.tree-item.active, .sidebar-doc-item.active, .sidebar-item.active').forEach(el => el.classList.remove('active'))
-        const studioBtn = document.getElementById('plugin-studio-btn')
-        if (studioBtn) studioBtn.classList.add('active')
 
-        hideContentViews('plugin-studio-view')
+        // Sync the contextual sidebar to the surface (Calendar → calendar nav,
+        // Email → inbox nav). Tasks/Notifications have no dedicated panel → Home.
+        const SIDEBAR_FOR_SURFACE = { calendar: 'calendar', email: 'inbox' }
+        setSidebarView(SIDEBAR_FOR_SURFACE[surfaceKey] || 'home')
+
+        hideContentViews(viewId)
         if (editor) editor.style.display = 'none'
         if (mainWrapper) mainWrapper.style.display = 'flex'
-        // Own full surface — no document header / editor footer (restored on note open).
+        // Each island is its own full surface — no document header / editor footer.
         if (header) header.style.display = 'none'
         if (footer) footer.style.display = 'none'
-        if (studioView) studioView.style.display = 'flex'
-
-        if (pluginStudio && studioView) {
-            // mount() is async + idempotent-safe (it clears the root first), so calling
-            // it on each show is fine; refresh() re-detects providers on subsequent shows.
-            if (!pluginStudioMounted) {
-                Promise.resolve(pluginStudio.mount(studioView)).catch((e) => console.warn('[plugins] Studio mount failed:', e))
-                pluginStudioMounted = true
-            } else if (typeof pluginStudio.refresh === 'function') {
-                Promise.resolve(pluginStudio.refresh()).catch(() => {})
-            } else {
-                Promise.resolve(pluginStudio.mount(studioView)).catch(() => {})
-            }
+        if (target) {
+            target.style.display = 'flex'
+            try {
+                if (!reactHost) reactHost = buildReactHost()
+                mountReactSurface(target, surfaceKey, reactHost)
+            } catch (e) { console.warn('[islands] mount failed:', e) }
         }
-    } catch (e) { console.warn('[plugins] showPluginStudioPage failed:', e) }
+    } catch (e) { console.warn('[islands] showReactSurfacePage failed:', e) }
+}
+
+/**
+ * Wire the notes-derived engines that feed Tasks / Calendar / Inbox. Providers are
+ * injected here (the engines stay framework- and app-agnostic). Called once after
+ * the managers exist.
+ */
+function initDerivedEngines() {
+    try {
+        taskScan.init({
+            getRoots: async () => {
+                const roots = new Set()
+                if (Store.projectPath) roots.add(Store.projectPath)
+                const known = (await window.api.getSettings('knownProjects').catch(() => null)) || []
+                for (const k of known) if (k) roots.add(k)
+                return [...roots]
+            },
+            getOpenTeamDocs: async () => {
+                // v1: only the currently-open team note (live Y.Text → in-place toggle).
+                try {
+                    if (currentTeamNote && p2pTeamManager && docEngine && docEngine.text) {
+                        const { teamId, noteId } = currentTeamNote
+                        const meta = p2pTeamManager.getNoteMeta ? p2pTeamManager.getNoteMeta(teamId, noteId) : null
+                        return [{
+                            source: `team:${teamId}:${noteId}`,
+                            title: (meta && meta.title) || 'Team note',
+                            getText: () => { try { return docEngine.text.toString() } catch { return '' } },
+                            ytext: docEngine.text,
+                        }]
+                    }
+                } catch (_e) { /* noop */ }
+                return []
+            },
+        })
+        inboxStore.init({
+            getScan: () => taskScan.getScan(),
+            getMyHandles: () => {
+                const set = new Set()
+                try {
+                    for (const t of (p2pTeamManager ? p2pTeamManager.getTeams() : [])) {
+                        const id = identity.getIdentity(t.teamId)
+                        if (id && id.username) set.add(String(id.username).toLowerCase())
+                    }
+                } catch (_e) { /* noop */ }
+                return set
+            },
+        })
+        // Reflect inbox unread on the bottom utility badge.
+        window.addEventListener('inbox:items-updated', (e) => {
+            try {
+                const n = (e && e.detail && e.detail.unread) || 0
+                const badge = document.getElementById('inbox-unread-badge')
+                if (badge) {
+                    badge.textContent = n > 9 ? '9+' : String(n)
+                    badge.style.display = n > 0 ? 'inline-flex' : 'none'
+                }
+            } catch (_e) { /* noop */ }
+        })
+        // Prime once so the badge + first surface open are warm.
+        try { taskScan.requestScan() } catch (_e) { /* noop */ }
+        try { Promise.resolve(inboxStore.getItems()).catch(() => {}) } catch (_e) { /* noop */ }
+    } catch (e) { console.warn('[islands] derived-engine init failed:', e) }
 }
 
 async function init() {
@@ -1406,7 +1539,7 @@ async function init() {
     document.documentElement.scrollLeft = 0
     document.body.scrollLeft = 0
 
-    console.log('[Notionless] Init starting...')
+    console.log('[Paperus] Init starting...')
     
     window.addEventListener('unhandledrejection', (event) => {
         if (isIndexedDbOpenError(event?.reason)) {
@@ -1430,7 +1563,7 @@ async function init() {
         if (icon) icon.textContent = 'P'
     }
 
-    document.title = 'Notionless v1.0.1'
+    document.title = 'Paperus'
     
     const titleInput = document.getElementById('doc-title')
     const sizer = document.getElementById('doc-title-sizer')
@@ -1448,7 +1581,7 @@ async function init() {
     const editorParent = document.getElementById('editor')
     cmView = createEditor(editorParent, { placeholder: 'Start writing...' })
     window.cmView = cmView
-    console.log('[Notionless] CodeMirror 6 initialized')
+    console.log('[Paperus] CodeMirror 6 initialized')
 
     const headerRight = document.querySelector('.header-right')
     const shareBtn = document.createElement('button')
@@ -1503,8 +1636,10 @@ async function init() {
     // routes to its show() instead of loadFileContent.
     const VIEW_TABS = {
         '@brain': { title: 'Company Brain', show: () => showCompanyBrainPage() },
-        '@plugin-lab': { title: 'Plugin Lab', show: () => showPluginLabPage() },
-        '@plugin-studio': { title: 'Plugin Studio', show: () => showPluginStudioPage() },
+        '@tasks': { title: 'Tasks', show: () => showReactSurfacePage('tasks-view', 'tasks') },
+        '@calendar': { title: 'Calendar', show: () => showReactSurfacePage('calendar-view', 'calendar') },
+        '@inbox': { title: 'Inbox', show: () => showReactSurfacePage('inbox-view', 'inbox') },
+        '@email': { title: 'Email', show: () => showReactSurfacePage('email-view', 'email') },
     }
     tabManager = new TabManager(async (path) => {
         const view = VIEW_TABS[path]
@@ -1547,6 +1682,29 @@ async function init() {
     cmdPalette = new CommandPalette(indexer)
     notificationCenter = new NotificationCenter()
     companyBrainCenter = new CompanyBrainCenter({ openFile: (p) => openFile(p) })
+    // Debug handle (also lets headless probes inspect agents/engine/tools).
+    try { window.companyBrainCenter = companyBrainCenter } catch (_) { /* no-op */ }
+    // Company Brain docked as a right-hand panel (the design's "chat on the
+    // side"), reusing the same engine. Mounted as the 3rd column of .wrapper.
+    aiDock = new AIDock({
+        getBrain: () => companyBrainCenter,
+        getDocContext: () => {
+            const t = document.getElementById('doc-title')
+            const v = t && t.value ? t.value.trim() : ''
+            return v ? { label: v } : null
+        },
+        onToggle: (isOpen) => {
+            const btn = document.getElementById('ai-dock-toggle')
+            if (btn) btn.classList.toggle('is-active', isOpen)
+        },
+    })
+    {
+        const wrapper = document.querySelector('.wrapper')
+        if (wrapper) aiDock.mount(wrapper)
+        const toggleBtn = document.getElementById('ai-dock-toggle')
+        if (toggleBtn) toggleBtn.addEventListener('click', () => aiDock.toggle())
+        setupSidebarResizer()
+    }
     moreMenu = new MoreMenu(docEngine)
     {
         const editorContainer = document.querySelector('.editor-container')
@@ -1598,8 +1756,14 @@ async function init() {
     // settings, then renders them into the "Teams" sidebar section.
     p2pTeamManager = new P2PTeamManager()
     window.p2pTeamManager = p2pTeamManager
+    // Wire Tasks/Calendar/Inbox derived-data engines now that managers exist.
+    initDerivedEngines()
+    // Capture whether we were launched from an invite/share link BEFORE
+    // handleP2PDeepLink() strips it from the address bar — first-run onboarding
+    // must stand down when a deep link is driving the session.
+    const hadDeepLink = typeof window !== 'undefined' && !!(window.location && (window.location.hash || window.location.search))
     p2pTeamManager.init()
-        .then(() => { renderP2PTeams(); handleP2PDeepLink() })
+        .then(() => { renderP2PTeams(); handleP2PDeepLink(); maybeFirstRunOnboarding(hadDeepLink) })
         .catch((e) => console.warn('[Main] P2P team init failed', e))
 
     // Sandboxed plugin system: app.innerHTML exists and window.p2pTeamManager is
@@ -1671,13 +1835,14 @@ async function init() {
     updateClock()
 
     const homeBtn = document.getElementById('home-btn')
-    if (ENABLE_AI_HOME && homeBtn) {
+    if (homeBtn) {
         homeBtn.addEventListener('click', async () => {
             if (teamManager && teamManager.isOpen) teamManager.close()
-            showHomePage()
+            if (ENABLE_AI_HOME) showHomePage()
+            else showNoFileSelected()
         })
     }
-    
+
     const accountBtn = document.getElementById('account-btn')
     if (accountBtn) {
         accountBtn.addEventListener('click', (e) => {
@@ -1696,37 +1861,99 @@ async function init() {
     const inboxBtn = document.getElementById('inbox-btn')
     if (inboxBtn) {
         inboxBtn.addEventListener('click', () => {
-            if (notificationCenter) notificationCenter.toggle()
+            tabManager.addTab('@inbox', 'Inbox')
         })
     }
 
-    const brainBtn = document.getElementById('brain-btn')
-    if (brainBtn) {
-        brainBtn.addEventListener('click', () => {
-            tabManager.addTab('@brain', 'Company Brain')
+    // Chat (rail) + New chat (footer) + the Chat-view agent all open Company Brain.
+    const openBrain = () => tabManager.addTab('@brain', 'Company Brain')
+    const chatBtn = document.getElementById('chat-btn')
+    if (chatBtn) chatBtn.addEventListener('click', openBrain)
+    const newchatBtn = document.getElementById('newchat-btn')
+    if (newchatBtn) newchatBtn.addEventListener('click', openBrain)
+    const chatNewThread = document.getElementById('chat-new-thread')
+    if (chatNewThread) chatNewThread.addEventListener('click', () => { openBrain(); if (companyBrainCenter) companyBrainCenter.newThread() })
+    const composeBtn = document.getElementById('sidebar-compose-btn')
+    if (composeBtn) composeBtn.addEventListener('click', () => { void createNewNote() })
+
+    const tasksBtn = document.getElementById('tasks-btn')
+    if (tasksBtn) tasksBtn.addEventListener('click', () => { tabManager.addTab('@tasks', 'Tasks') })
+
+    const calendarBtn = document.getElementById('calendar-btn')
+    if (calendarBtn) calendarBtn.addEventListener('click', () => { tabManager.addTab('@calendar', 'Calendar') })
+    const calNewEvent = document.getElementById('cal-new-event')
+    if (calNewEvent) calNewEvent.addEventListener('click', () => { tabManager.addTab('@calendar', 'Calendar') })
+    // Connect an external (CalDAV) calendar account — open the Calendar surface,
+    // which hosts the account wizard, and ask it to open via calendar:cmd.
+    const calAddAccount = document.getElementById('cal-add-account')
+    if (calAddAccount) {
+        calAddAccount.addEventListener('click', () => {
+            window.__calCmd = { type: 'add-account' } // cold-open intent if the surface isn't mounted yet
+            tabManager.addTab('@calendar', 'Calendar')
+            window.dispatchEvent(new CustomEvent('calendar:cmd', { detail: { type: 'add-account' } }))
         })
     }
 
-    const pluginLabBtn = document.getElementById('plugin-lab-btn')
-    if (pluginLabBtn) {
-        if (Features.plugins) {
-            pluginLabBtn.addEventListener('click', () => { tabManager.addTab('@plugin-lab', 'Plugin Lab') })
-        } else {
-            pluginLabBtn.style.display = 'none'
-        }
+    const emailBtn = document.getElementById('email-btn')
+    if (emailBtn) emailBtn.addEventListener('click', () => { tabManager.addTab('@email', 'Email') })
+
+    // The Mail (Inbox) sidebar nav — Compose, account switcher and real folders —
+    // is painted by renderMailNav() into #sb-mail-nav from the Email surface's
+    // published email:nav-state, and its clicks dispatch email:cmd back. (Wiring
+    // lives with renderMailNav near the other contextual-sidebar renderers.)
+
+    // App rail: the clicked app expands to show its label AND swaps the contextual
+    // nav panel below (Home / Chat / Calendar / Inbox). `.is-active` is its own
+    // class so it never collides with the tree/doc `.active` selection.
+    const appnav = document.getElementById('appnav')
+    if (appnav) {
+        appnav.addEventListener('click', (e) => {
+            const btn = e.target.closest('.appnav-btn')
+            if (!btn || btn.classList.contains('appnav-btn--ghost')) return
+            appnav.querySelectorAll('.appnav-btn').forEach((b) => b.classList.remove('is-active'))
+            btn.classList.add('is-active')
+            if (btn.dataset.view) setSidebarView(btn.dataset.view)
+        })
     }
 
-    const pluginStudioBtn = document.getElementById('plugin-studio-btn')
-    if (pluginStudioBtn) {
-        if (Features.pluginStudio) {
-            pluginStudioBtn.style.display = ''
-            pluginStudioBtn.addEventListener('click', () => { tabManager.addTab('@plugin-studio', 'Plugin Studio') })
-        } else {
-            pluginStudioBtn.style.display = 'none'
-        }
+    const graphBtn = document.getElementById('graph-btn')
+    if (graphBtn) {
+        graphBtn.addEventListener('click', () => openGraphView())
     }
-    // The Plugin Lab "Open Plugin Studio" button dispatches this to switch views.
-    window.addEventListener('plugin-studio:open', () => { tabManager.addTab('@plugin-studio', 'Plugin Studio') })
+
+    // Global shortcuts for the quick features. Capture phase + stopImmediate so a
+    // claimed combo (e.g. ⌘⇧G) wins over CodeMirror's own keymap (find-previous).
+    document.addEventListener('keydown', (e) => {
+        if (!(e.metaKey || e.ctrlKey) || !e.shiftKey) return
+        const k = e.key.toLowerCase()
+        if (k === 'd') {
+            e.preventDefault(); e.stopImmediatePropagation()
+            void openTodaysDailyNote()
+        } else if (k === 'g') {
+            e.preventDefault(); e.stopImmediatePropagation()
+            if (graphView && graphView.isOpen()) graphView.close()
+            else openGraphView()
+        } else if (k === 'f' && cmView) {
+            e.preventDefault(); e.stopImmediatePropagation()
+            const on = toggleFocusMode(cmView)
+            flashHint(on ? 'Focus mode on' : 'Focus mode off')
+        }
+    }, true)
+
+    // ⌘J / Ctrl-J toggles the Company Brain side dock.
+    document.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'j') {
+            e.preventDefault(); e.stopImmediatePropagation()
+            if (aiDock) aiDock.toggle()
+        }
+    }, true)
+
+    // Free a React-island surface's root + listeners when its tab closes.
+    tabManager.onTabClose = (path) => {
+        const map = { '@tasks': 'tasks-view', '@calendar': 'calendar-view', '@inbox': 'inbox-view', '@email': 'email-view' }
+        const vid = map[path]
+        if (vid) { const el = document.getElementById(vid); if (el) { try { unmountReactSurface(el) } catch (_e) { /* noop */ } } }
+    }
 
     const trashBtn = document.getElementById('trash-btn')
     if (trashBtn) {
@@ -1803,6 +2030,21 @@ async function init() {
             window.dispatchEvent(new CustomEvent('cmd:link-device'))
         })
     }
+
+    // Team-managed server: point the app at the team's own self-hosted relay
+    // (signaling + optional always-on sync) at runtime — no rebuild, and once
+    // connected nothing depends on Naridon. See server-config.js.
+    const teamServerBtn = document.getElementById('team-server-btn')
+    if (teamServerBtn) {
+        teamServerBtn.addEventListener('click', (e) => {
+            e.stopPropagation()
+            openServerDialog()
+        })
+    }
+
+    // If a server connect/disconnect just reloaded the app, flash a one-shot
+    // confirmation toast so the switch doesn't feel silent. See server-config.js.
+    flashConnectToastIfPending()
 
     window.addEventListener('cmd:properties', () => {
         const activeItem = document.querySelector('.tree-item.active')
@@ -2436,6 +2678,8 @@ async function init() {
                 if (companyBrainCenter) {
                     companyBrainCenter.handleFileChanged(filePath)
                 }
+                // Re-broadcast as a DOM event so the task-scan engine can invalidate.
+                try { window.dispatchEvent(new CustomEvent('fs:file-changed', { detail: filePath })) } catch (_e) { /* noop */ }
             } else if (type === 'plugin:changed') {
                 // Hot-reload: a plugin's files changed on disk (or plugin:reload was
                 // invoked). Re-load that one plugin's sandbox. Fully defensive.
@@ -2494,6 +2738,14 @@ async function init() {
                     } catch (_e) { /* not a parseable URL — ignore */ }
                 }).catch((e) => console.error('[Main] open-url deep link failed', e))
             }
+
+            // Bridge IPC push messages for the React surfaces onto the window event
+            // bus that host.on(...) listens to. The Email/Calendar islands subscribe
+            // to email:new / email:syncProgress / calendar:changed this way.
+            if (typeof type === 'string' && (type.startsWith('email:') || type.startsWith('calendar:') || type.startsWith('mcp:'))) {
+                try { window.dispatchEvent(new CustomEvent(type, { detail: args[0] })) } catch (_e) { /* noop */ }
+                if (type === 'calendar:changed') renderCalendarNav()
+            }
         })
     }
 
@@ -2506,7 +2758,7 @@ async function init() {
     }
 
   const lastProject = await window.api.getSettings('lastProject')
-  console.log('[Notionless] Last project:', lastProject)
+  console.log('[Paperus] Last project:', lastProject)
   const isWeb = typeof window !== 'undefined' && (document.body.classList.contains('is-web') || !window.api || !window.api.onMessage);
 
   if (lastProject) {
@@ -2589,11 +2841,25 @@ async function init() {
         }
     }, true);
 
-    console.log('[Notionless] Init complete!')
+    console.log('[Paperus] Init complete!')
   } catch (error) {
-    console.error('[Notionless] FATAL ERROR during init:', error)
+    console.error('[Paperus] FATAL ERROR during init:', error)
     alert('Failed to initialize: ' + error.message)
   }
+}
+
+/** Open the installed-plugins manager (account ▸ Developer ▸ Plugins…). */
+function openPluginsSettings() {
+    const c = window.__pluginController
+    if (!c) { flashHint('Plugins are still loading…'); return }
+    const controller = {
+        list: () => { try { return c.list ? c.list() : [] } catch { return [] } },
+        enable: (id) => Promise.resolve(c.enable ? c.enable(id) : null),
+        disable: (id) => Promise.resolve(c.disable ? c.disable(id) : null),
+        reload: (id) => Promise.resolve(c.reload ? c.reload(id) : null),
+        quickstartUrl: 'https://github.com/Naridon-Inc/paperus/blob/master/docs/PLUGIN_SYSTEM.md',
+    }
+    try { openPluginSettings(controller) } catch (e) { console.warn('[plugins] settings open failed:', e) }
 }
 
 async function renderWorkspacePopover() {
@@ -2648,14 +2914,50 @@ async function renderWorkspacePopover() {
                 <div class="wp-menu-item" id="wp-new-team"><i class="fas fa-plus" style="width:16px;text-align:center;color:#999;"></i> <span>New team</span></div>
                 <div class="wp-menu-item" id="wp-join-team"><i class="fas fa-link" style="width:16px;text-align:center;color:#999;"></i> <span>Join with a link</span></div>
             </div>
+            ${Features.plugins ? `
+            <div class="wp-divider"></div>
+            <div class="wp-section-header">Developer</div>
+            <div class="wp-menu-list">
+                <div class="wp-menu-item" id="wp-plugins"><i class="fas fa-puzzle-piece" style="width:16px;text-align:center;color:#999;"></i> <span>Plugins…</span></div>
+                <div class="wp-menu-item" id="wp-plugin-docs"><i class="fas fa-book" style="width:16px;text-align:center;color:#999;"></i> <span>Plugin SDK quickstart</span></div>
+            </div>
+            ` : ''}
+            <div class="wp-divider"></div>
+            <div class="wp-section-header">Appearance</div>
+            <div class="wp-theme-row">
+                <div class="wp-theme-seg" role="group" aria-label="Theme">
+                    <button class="wp-theme-opt" data-theme-pref="light" type="button"><i class="fas fa-sun"></i> Light</button>
+                    <button class="wp-theme-opt" data-theme-pref="dark" type="button"><i class="fas fa-moon"></i> Dark</button>
+                    <button class="wp-theme-opt" data-theme-pref="system" type="button"><i class="fas fa-desktop"></i> System</button>
+                </div>
+            </div>
             <div class="wp-footer-info">Local-first · no account · peer-to-peer · v${appVersion || '1.0.6'}</div>
         `
+        // Theme segmented control: reflect current preference + wire clicks.
+        const syncThemeButtons = () => {
+            const pref = getThemePreference()
+            popover.querySelectorAll('.wp-theme-opt').forEach((b) => {
+                b.classList.toggle('active', b.dataset.themePref === pref)
+            })
+        }
+        syncThemeButtons()
+        popover.querySelectorAll('.wp-theme-opt').forEach((b) => {
+            b.onclick = (ev) => {
+                ev.stopPropagation() // keep the popover open while switching
+                setTheme(b.dataset.themePref)
+                syncThemeButtons()
+            }
+        })
         const hide = () => { popover.style.display = 'none' }
         document.getElementById('wp-open-folder').onclick = async () => { hide(); await openProject() }
         document.getElementById('wp-load-workspace').onclick = async () => { hide(); await openWorkspace() }
         document.getElementById('wp-save-workspace').onclick = async () => { hide(); await saveWorkspace() }
         document.getElementById('wp-new-team').onclick = () => { hide(); window.dispatchEvent(new CustomEvent('cmd:create-team')) }
         document.getElementById('wp-join-team').onclick = () => { hide(); window.dispatchEvent(new CustomEvent('cmd:join-team')) }
+        const wpPlugins = document.getElementById('wp-plugins')
+        if (wpPlugins) wpPlugins.onclick = () => { hide(); openPluginsSettings() }
+        const wpPluginDocs = document.getElementById('wp-plugin-docs')
+        if (wpPluginDocs) wpPluginDocs.onclick = () => { hide(); try { window.api.invoke('shell:openExternal', 'https://github.com/Naridon-Inc/paperus/blob/master/docs/PLUGIN_SYSTEM.md') } catch (_e) { /* noop */ } }
     } catch (e) { popover.innerHTML = `<div style="padding: 10px; color: red;">Error: ${e.message}</div>` }
 }
 
@@ -2664,7 +2966,7 @@ function boot() {
     if (!window.api) throw new Error('window.api is not available (preload not loaded / contextBridge missing)')
     void init()
   } catch (e) {
-    console.error('[Notionless] Boot failed:', e)
+    console.error('[Paperus] Boot failed:', e)
     alert('Boot failed: ' + (e && e.message ? e.message : String(e)))
   }
 }
@@ -2779,6 +3081,203 @@ async function resolveWikiTitle(title) {
 async function createPageWithTitle(title) {
   const clean = String(title).trim().replace(/[\\/:*?"<>|]/g, '') || 'Untitled'
   await createNewNote(`# ${clean}\n`)
+}
+
+// ── Quick features: Daily Notes · Graph view · Focus mode ────────────────────
+
+/** Small transient toast for lightweight feature feedback. */
+function flashHint(msg) {
+  let el = document.getElementById('feature-hint-toast')
+  if (!el) {
+    el = document.createElement('div')
+    el.id = 'feature-hint-toast'
+    el.style.cssText = 'position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(8px);'
+      + 'background:#2c2c30;color:#fff;padding:8px 14px;border-radius:9px;'
+      + 'font:13px -apple-system,system-ui,sans-serif;box-shadow:0 6px 22px rgba(0,0,0,0.22);'
+      + 'z-index:5000;opacity:0;transition:opacity .16s ease, transform .16s ease;pointer-events:none;'
+    document.body.appendChild(el)
+  }
+  el.textContent = msg
+  requestAnimationFrame(() => { el.style.opacity = '1'; el.style.transform = 'translateX(-50%) translateY(0)' })
+  clearTimeout(flashHint._t)
+  flashHint._t = setTimeout(() => {
+    el.style.opacity = '0'
+    el.style.transform = 'translateX(-50%) translateY(8px)'
+  }, 1600)
+}
+
+/** Open (or create) today's daily note — thin alias kept for the ⌘⇧D shortcut. */
+async function openTodaysDailyNote() { return openDailyNote(todayISO()) }
+
+/**
+ * Open (or create) the daily note for `iso` (YYYY-MM-DD; defaults to today).
+ * Targets the open P2P team when a team note is active (we know its teamId);
+ * otherwise the local vault. If neither exists, nudge the user to open a folder.
+ */
+async function openDailyNote(iso) {
+  const dateStr = iso || todayISO()
+  // 1) P2P team context.
+  if (currentTeamNote && p2pTeamManager) {
+    const teamId = currentTeamNote.teamId
+    try {
+      const tree = p2pTeamManager.getNotesTree(teamId)
+      const existing = findNoteByTitle(tree, dateStr)
+      let noteId = existing ? existing.id : null
+      if (!noteId) {
+        noteId = await p2pTeamManager.createNote(teamId, { title: dateStr })
+        flashHint(`Created daily note · ${dateStr}`)
+      }
+      window.dispatchEvent(new CustomEvent('cmd:open-team-note', { detail: { teamId, noteId } }))
+      return
+    } catch (e) {
+      console.warn('[daily] team path failed, trying local:', e)
+    }
+  }
+  // 2) Local vault.
+  try {
+    const existing = await resolveWikiTitle(dateStr)
+    if (existing) { openFile(existing); return }
+  } catch (_e) { /* fall through to create */ }
+  const root = Store.projectPath || (await window.api.getSettings('knownProjects').catch(() => null) || [])[0]
+  if (!root) {
+    flashHint('Open a folder (or a team) to start daily notes')
+    document.getElementById('add-folder-btn')?.click()
+    return
+  }
+  await createNewNote(buildDailyNoteBody(dateStr))
+  flashHint(`Created daily note · ${dateStr}`)
+}
+
+/**
+ * Create a calendar "event" = append a dated task line to the relevant daily
+ * note, WITHOUT navigating away (the calendar surface stays put and refreshes
+ * via the task scan). Mirrors openDailyNote's team-first / local-fallback
+ * resolution. Returns { ok, scope, path? } or { ok:false, error }.
+ *
+ * payload: { iso, title, remind?, allDay?, time? }
+ */
+async function createCalendarEvent({ iso, title, remind = false, allDay = true, time = '' } = {}) {
+  const dateStr = iso || todayISO()
+  const clean = String(title || '').trim().replace(/\r?\n/g, ' ') || 'Untitled event'
+  const timePart = (!allDay && time) ? ` ${String(time).trim()}` : ''
+  const token = remind ? `${dateStr} remind` : dateStr
+  const line = `- [ ] ${clean}${timePart} @date(${token})`
+
+  // 1) P2P team context — append into the team daily note's CRDT text.
+  if (currentTeamNote && p2pTeamManager) {
+    try {
+      const teamId = currentTeamNote.teamId
+      const tree = p2pTeamManager.getNotesTree(teamId)
+      const existing = findNoteByTitle(tree, dateStr)
+      const noteId = existing ? existing.id : await p2pTeamManager.createNote(teamId, { title: dateStr })
+      const engine = await p2pTeamManager.openNote(teamId, noteId)
+      const ytext = engine && engine.text
+      if (ytext) {
+        const cur = ytext.toString()
+        const sep = cur && !/\n$/.test(cur) ? '\n' : ''
+        ytext.insert(ytext.length, `${sep}${line}\n`)
+        try { taskScan.requestScan({ force: true }) } catch (_e) { /* noop */ }
+        flashHint(`Added event · ${dateStr}`)
+        return { ok: true, scope: 'team' }
+      }
+    } catch (e) {
+      console.warn('[event] team path failed, trying local:', e)
+    }
+  }
+
+  // 2) Local vault — append to the existing daily note, or create it.
+  const root = Store.projectPath || (await window.api.getSettings('knownProjects').catch(() => null) || [])[0]
+  if (!root) {
+    flashHint('Open a folder (or a team) to add events')
+    return { ok: false, error: 'no-root' }
+  }
+  let path = null
+  try { path = await resolveWikiTitle(dateStr) } catch (_e) { path = null }
+  if (path) {
+    const cur = await window.api.readFile(path).catch(() => '')
+    const sep = cur && !/\n$/.test(cur) ? '\n' : ''
+    await window.api.writeFile(path, `${cur}${sep}${line}\n`)
+  } else {
+    path = `${root}/${dateStr}.md`
+    await window.api.writeFile(path, `${buildDailyNoteBody(dateStr)}\n${line}\n`)
+    try { await loadProject(null) } catch (_e) { /* tree refresh best-effort */ }
+  }
+  try { taskScan.requestScan({ force: true }) } catch (_e) { /* noop */ }
+  flashHint(`Added event · ${dateStr}`)
+  return { ok: true, scope: 'local', path }
+}
+
+/**
+ * Assemble graph data for the GraphView overlay:
+ *  - P2P team open → nodes = note tree, edges = parent→child structure.
+ *  - Local vault    → nodes = .md files, edges = [[wiki-links]] resolved by title.
+ */
+async function gatherGraphData() {
+  if (currentTeamNote && p2pTeamManager) {
+    try {
+      const teamId = currentTeamNote.teamId
+      const tree = p2pTeamManager.getNotesTree(teamId)
+      const nodes = []
+      const edges = []
+      const walk = (list, parentId) => {
+        for (const n of (list || [])) {
+          if (n.deleted) continue
+          nodes.push({ id: n.id, title: n.title || 'Untitled' })
+          if (parentId) edges.push({ from: parentId, to: n.id })
+          if (Array.isArray(n.children) && n.children.length) walk(n.children, n.id)
+        }
+      }
+      walk(Array.isArray(tree) ? tree : (tree ? [tree] : []), null)
+      return { nodes, edges }
+    } catch (e) {
+      console.warn('[graph] team gather failed:', e)
+    }
+  }
+  // Local vault link graph.
+  const root = Store.projectPath || (await window.api.getSettings('knownProjects').catch(() => null) || [])[0]
+  if (!root) return { nodes: [], edges: [] }
+  const files = await window.api.invoke('fs:listMarkdownFilesRecursive', root).catch(() => [])
+  const capped = files.slice(0, 600)
+  const byTitle = new Map()
+  const nodes = []
+  for (const p of capped) {
+    const base = (await window.api.basename(p)).replace(/\.(md|note)$/i, '')
+    nodes.push({ id: p, title: base.replace(/_/g, ' ') })
+    byTitle.set(base.toLowerCase(), p)
+    byTitle.set(base.replace(/_/g, ' ').toLowerCase(), p)
+  }
+  const WIKILINK_RE = /\[\[([^[\]|#]+?)(?:#[^[\]|]*)?(?:\|[^[\]]+?)?\]\]/g
+  const edges = []
+  for (const p of capped) {
+    let text = ''
+    try { text = await window.api.readFile(p) } catch (_e) { continue }
+    if (!text) continue
+    WIKILINK_RE.lastIndex = 0
+    let m = WIKILINK_RE.exec(text)
+    while (m !== null) {
+      const target = byTitle.get(String(m[1]).trim().toLowerCase())
+      if (target && target !== p) edges.push({ from: p, to: target })
+      m = WIKILINK_RE.exec(text)
+    }
+  }
+  return { nodes, edges }
+}
+
+/** Open the graph overlay (lazily constructed). */
+function openGraphView() {
+  if (!graphView) {
+    graphView = new GraphView({
+      openNode: (node) => {
+        graphView.close()
+        if (currentTeamNote && p2pTeamManager) {
+          window.dispatchEvent(new CustomEvent('cmd:open-team-note', { detail: { teamId: currentTeamNote.teamId, noteId: node.id } }))
+        } else {
+          openFile(node.id)
+        }
+      },
+    })
+  }
+  graphView.open(gatherGraphData)
 }
 
 /**
@@ -3573,6 +4072,351 @@ function showHomePage() {
   void showNoFileSelected()
 }
 
+/**
+ * On a genuine first launch (no saved workspace, no joined team, not opened via
+ * an invite link), overlay the Paperus welcome screen on top of the normal empty
+ * state. Wired to the three real first-run actions; dismissing reveals the
+ * workspace underneath. Shown at most once (gated in onboarding.js).
+ */
+async function maybeFirstRunOnboarding(hadDeepLink) {
+  try {
+    const isWeb = typeof window !== 'undefined' && (document.body.classList.contains('is-web') || !window.api || !window.api.onMessage)
+    const hasTeams = !!(p2pTeamManager && typeof p2pTeamManager.getTeams === 'function' && p2pTeamManager.getTeams().length)
+    let hasProject = false
+    try { hasProject = !!(window.api && await window.api.getSettings('lastProject')) } catch (_e) { /* settings unavailable */ }
+    maybeShowOnboarding({
+      isWeb,
+      hasTeams,
+      hasProject,
+      hadDeepLink,
+      handlers: {
+        onStartWriting: () => { if (isWeb) { void createNewNote() } else { void openProject() } },
+        onCreateTeam: () => window.dispatchEvent(new CustomEvent('cmd:create-team')),
+        onJoinTeam: () => window.dispatchEvent(new CustomEvent('cmd:join-team')),
+        onSkip: () => { /* empty state already mounted underneath */ }
+      }
+    })
+  } catch (e) {
+    console.warn('[Main] onboarding check failed', e)
+  }
+}
+
+// ── Contextual sidebar ─────────────────────────────────────────────────────
+// The app rail (Home / Chat / Calendar / Inbox) swaps the nav panel below it,
+// mirroring the Workspace Shell design. Each panel is a `.sb-view`; only the
+// active app's panel is shown. Safe to call before the panels exist (no-op).
+function setSidebarView(view) {
+  const valid = ['home', 'chat', 'calendar', 'inbox']
+  const v = valid.includes(view) ? view : 'home'
+  const panels = document.querySelectorAll('.sb-view')
+  if (!panels.length) return
+  panels.forEach((el) => { el.style.display = el.id === `sb-view-${v}` ? '' : 'none' })
+  // Keep the rail highlight in sync when the view changes programmatically.
+  document.querySelectorAll('#appnav .appnav-btn').forEach((b) => {
+    if (b.dataset.view) b.classList.toggle('is-active', b.dataset.view === v)
+  })
+  if (v === 'calendar') { renderMiniMonth(); renderCalendarNav() }
+  if (v === 'chat') { renderAgentAvatars(); renderChatRecents() }
+  if (v === 'inbox') renderMailNav()
+}
+
+// Fill the Chat view's "Recent" list from the Company Brain's saved threads
+// (newest first). Clicking a row opens the Brain tab and switches to that
+// conversation. Kept in sync via the `brain:threads-changed` event the brain
+// fires on every save/load.
+function renderChatRecents() {
+  const host = document.getElementById('sb-chat-recent')
+  if (!host) return
+  const threads = (companyBrainCenter && Array.isArray(companyBrainCenter.threads)) ? companyBrainCenter.threads : []
+  const recent = threads
+    .filter((t) => t && t.id && Array.isArray(t.messages) && t.messages.length)
+    .sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0))
+    .slice(0, 30)
+  if (!recent.length) {
+    host.innerHTML = '<div class="sb-empty">Your chats will appear here.</div>'
+    return
+  }
+  const activeId = companyBrainCenter ? companyBrainCenter.activeThreadId : null
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+  // Group newest-first into time buckets (Today / Yesterday / Previous 7|30 days /
+  // Older), reusing the brain's bucket logic so labels match the threads panel.
+  const ORDER = ['Today', 'Yesterday', 'Previous 7 days', 'Previous 30 days', 'Older']
+  const bucketOf = (t) => {
+    const ts = t.updatedAt || t.createdAt || 0
+    return (companyBrainCenter && typeof companyBrainCenter._bucketFor === 'function') ? companyBrainCenter._bucketFor(ts) : 'Older'
+  }
+  const groups = new Map()
+  recent.forEach((t) => { const b = bucketOf(t); if (!groups.has(b)) groups.set(b, []); groups.get(b).push(t) })
+  const rowHTML = (t) => `
+    <button class="sb-chat-row${t.id === activeId ? ' is-active' : ''}" data-tid="${esc(t.id)}" title="${esc(t.title || 'Untitled chat')}">
+      <svg class="sb-chat-ic" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 5.5h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H10l-4 3v-3H5a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+      <span class="sb-chat-nm">${esc(t.title || 'Untitled chat')}</span>
+    </button>`
+  host.innerHTML = ORDER.filter((b) => groups.has(b)).map((b) => `
+    <div class="sidebar-section-header sb-time-header">${b}</div>
+    ${groups.get(b).map(rowHTML).join('')}`).join('')
+  host.querySelectorAll('.sb-chat-row').forEach((row) => {
+    row.addEventListener('click', () => {
+      const tid = row.dataset.tid
+      if (!tid) return
+      tabManager.addTab('@brain', 'Company Brain')
+      if (companyBrainCenter) companyBrainCenter.switchThread(tid)
+    })
+  })
+}
+window.addEventListener('brain:threads-changed', () => renderChatRecents())
+
+// Paint the Agents avatar row (a horizontal strip of circular persona avatars +
+// a dashed "New agent"). Clicking an agent selects it and opens the Brain on a
+// fresh chat bound to that persona; the dashed button opens the agent builder.
+function renderAgentAvatars() {
+  const host = document.getElementById('sb-agents-row')
+  if (!host || !companyBrainCenter) return
+  const agents = Array.isArray(companyBrainCenter.agents) ? companyBrainCenter.agents : []
+  const activeId = companyBrainCenter.activeAgentId
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+  const cell = (a) => `
+    <button class="sb-agent${a.id === activeId ? ' is-active' : ''}" data-aid="${esc(a.id)}" title="${esc(a.name)}">
+      ${companyBrainCenter.agentAvatarHTML(a, { size: 34 })}
+      <span class="sb-agent-nm">${esc(a.name)}</span>
+    </button>`
+  host.innerHTML = agents.map(cell).join('') + `
+    <button class="sb-agent sb-agent--new" id="sb-agent-new" title="New agent">
+      <span class="sb-agent-ic"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+      <span class="sb-agent-nm">New agent</span>
+    </button>`
+  host.querySelectorAll('.sb-agent[data-aid]').forEach((b) => {
+    b.addEventListener('click', () => {
+      tabManager.addTab('@brain', 'Company Brain')
+      companyBrainCenter.setActiveAgent(b.dataset.aid, { newChat: true })
+      renderAgentAvatars()
+    })
+  })
+  const newBtn = host.querySelector('#sb-agent-new')
+  if (newBtn) newBtn.addEventListener('click', () => companyBrainCenter.openAgentBuilder())
+}
+window.addEventListener('brain:agents-changed', () => renderAgentAvatars())
+
+// ── Mail (Inbox) sidebar nav ────────────────────────────────────────────────
+// Painted into #sb-mail-nav from the Email surface's published `email:nav-state`
+// (accounts + real folders + active selection). Clicks dispatch `email:cmd` back
+// to the surface — the same vanilla↔island event seam chat recents uses. This is
+// what lets Mail live in the ONE main sidebar (no second folder rail).
+let lastMailState = null
+
+const MAIL_FOLDER_ICONS = {
+  inbox: '<path d="M4 13l2-7h12l2 7v4a1 1 0 01-1 1H5a1 1 0 01-1-1z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M4 13h4l1 2h6l1-2h4" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>',
+  starred: '<path d="M12 4l2 5 5 .5-4 3.5 1.5 5L12 15l-4.5 3 1.5-5-4-3.5 5-.5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  sent: '<path d="M5 12l4-8h6l4 8M5 12v6a1 1 0 001 1h12a1 1 0 001-1v-6M5 12h14" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  drafts: '<path d="M7 4h7l4 4v12a1 1 0 01-1 1H7a1 1 0 01-1-1V5a1 1 0 011-1z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M13 4v5h5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  archive: '<path d="M4 7h16v3H4zM5 10v8a1 1 0 001 1h12a1 1 0 001-1v-8M10 13h4" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  junk: '<path d="M12 4a8 8 0 100 16 8 8 0 000-16zM12 8v5M12 16h.01" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>',
+  trash: '<path d="M5 7h14M9 7V5h6v2M6 7l1 13h10l1-13" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  folder: '<path d="M4 7a1 1 0 011-1h4l2 2h8a1 1 0 011 1v9a1 1 0 01-1 1H5a1 1 0 01-1-1z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+}
+
+// special-use / name → {label, order, icon}. Mirrors email/FolderList.classifyFolder.
+function mailClassifyFolder(f) {
+  const su = String(f.specialUse || f.special_use || '').toLowerCase().replace(/\\/g, '')
+  const nm = String(f.name || f.path || '').toLowerCase()
+  if (su.includes('inbox') || nm === 'inbox') return { label: 'Inbox', order: 0, icon: 'inbox' }
+  if (su.includes('flag') || su.includes('star')) return { label: f.name || 'Starred', order: 0.5, icon: 'starred' }
+  if (su.includes('sent') || nm === 'sent') return { label: f.name || 'Sent', order: 1, icon: 'sent' }
+  if (su.includes('draft') || nm === 'drafts') return { label: f.name || 'Drafts', order: 2, icon: 'drafts' }
+  if (su.includes('archive') || nm === 'archive') return { label: f.name || 'Archive', order: 3, icon: 'archive' }
+  if (su.includes('junk') || su.includes('spam') || nm === 'junk' || nm === 'spam') return { label: f.name || 'Junk', order: 4, icon: 'junk' }
+  if (su.includes('trash') || su.includes('deleted') || nm === 'trash') return { label: f.name || 'Trash', order: 5, icon: 'trash' }
+  return null
+}
+
+const MAIL_DEFAULT_FOLDERS = [
+  { path: 'INBOX', name: 'Inbox', specialUse: '\\Inbox' },
+  { path: 'Sent', name: 'Sent', specialUse: '\\Sent' },
+  { path: 'Drafts', name: 'Drafts', specialUse: '\\Drafts' },
+  { path: 'Trash', name: 'Trash', specialUse: '\\Trash' },
+]
+
+// Render the Mail nav from the last published state (or a cold-start skeleton).
+function renderMailNav() {
+  const host = document.getElementById('sb-mail-nav')
+  if (!host) return
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+  const st = lastMailState || {}
+  const accounts = Array.isArray(st.accounts) ? st.accounts : []
+  const hasFolders = Array.isArray(st.folders) && st.folders.length
+  const folders = hasFolders ? st.folders : MAIL_DEFAULT_FOLDERS
+  const activeAccountId = st.activeAccountId || (accounts[0] && accounts[0].id) || null
+  const unified = !!st.unified || activeAccountId === '*'
+  const activeFolder = st.activeFolder || 'INBOX'
+
+  const icon = (k) => `<span class="sb-folder-ic"><svg viewBox="0 0 24 24" fill="none">${MAIL_FOLDER_ICONS[k] || MAIL_FOLDER_ICONS.folder}</svg></span>`
+  const ct = (n) => (Number(n) > 0 ? `<span class="sb-ct">${Number(n) > 999 ? '999+' : Number(n)}</span>` : '')
+
+  let html = '<button class="sb-primary" data-mail="compose"><svg viewBox="0 0 24 24" fill="none"><path d="M4 20l3.5-1L18 8.5 15.5 6 5 16.5 4 20z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 7.5L16.5 10" stroke="currentColor" stroke-width="1.6"/></svg><span>Compose</span></button>'
+
+  // Account switcher — only when there's more than one mailbox.
+  if (accounts.length > 1) {
+    const totalUnread = accounts.reduce((s, a) => s + (Number(a.unread) || 0), 0)
+    html += '<div class="sb-mail-accts">'
+    html += `<button class="sb-acct-row${unified ? ' is-active' : ''}" data-mail="acct" data-id="*">`
+      + '<span class="sb-acct-av sb-acct-av--all"><svg viewBox="0 0 24 24" fill="none"><path d="M4 13l2-7h12l2 7v4a1 1 0 01-1 1H5a1 1 0 01-1-1z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M4 13h4l1 2h6l1-2h4" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></span>'
+      + '<span class="sb-acct-nm">All inboxes</span>' + ct(totalUnread) + '</button>'
+    for (const a of accounts) {
+      const on = !unified && a.id === activeAccountId
+      const initial = esc(String(a.name || a.email || '?').trim().slice(0, 1).toUpperCase())
+      html += `<button class="sb-acct-row${on ? ' is-active' : ''}" data-mail="acct" data-id="${esc(a.id)}" title="${esc(a.email || '')}">`
+        + `<span class="sb-acct-av" style="background:${esc(a.color || 'var(--pp-ws-accent)')}">${initial}</span>`
+        + `<span class="sb-acct-nm">${esc(a.name || a.email || 'Mailbox')}</span>` + ct(a.unread) + '</button>'
+    }
+    html += '</div><div class="sb-mail-sep"></div>'
+  }
+
+  // Folder rows — hidden while "All inboxes" is active (that view IS the merge).
+  if (!unified) {
+    const specials = []
+    const others = []
+    for (const f of folders) {
+      const c = mailClassifyFolder(f)
+      if (c) specials.push({ f, c }); else others.push(f)
+    }
+    specials.sort((a, b) => a.c.order - b.c.order)
+    for (const { f, c } of specials) {
+      const on = (f.path || f.name) === activeFolder
+      html += `<button class="sb-folder${on ? ' is-active' : ''}" data-mail="folder" data-path="${esc(f.path || f.name)}">`
+        + icon(c.icon) + `<span class="sb-folder-nm">${esc(c.label)}</span>` + ct(f.unread) + '</button>'
+    }
+    if (others.length) {
+      html += '<div class="sb-mail-subhead">More</div>'
+      others.sort((a, b) => String(a.name || a.path).localeCompare(String(b.name || b.path)))
+      for (const f of others) {
+        const on = (f.path || f.name) === activeFolder
+        html += `<button class="sb-folder${on ? ' is-active' : ''}" data-mail="folder" data-path="${esc(f.path || f.name)}">`
+          + icon('folder') + `<span class="sb-folder-nm">${esc(f.name || f.path)}</span>` + ct(f.unread) + '</button>'
+      }
+    }
+  }
+
+  // Footer — add / manage accounts.
+  html += '<div class="sb-mail-sep"></div><div class="sb-mail-foot">'
+  html += '<button class="sb-folder" data-mail="add"><span class="sb-folder-ic"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span><span class="sb-folder-nm">Add account</span></button>'
+  html += '<button class="sb-folder" data-mail="manage"><span class="sb-folder-ic"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M12 3v2M12 19v2M21 12h-2M5 12H3M18.4 5.6l-1.4 1.4M7 17l-1.4 1.4M18.4 18.4 17 17M7 7 5.6 5.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="sb-folder-nm">Manage</span></button>'
+  html += '</div>'
+
+  host.innerHTML = html
+  host.querySelectorAll('[data-mail]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const kind = el.dataset.mail
+      if (kind === 'compose') mailCmd({ type: 'compose' })
+      else if (kind === 'add') mailCmd({ type: 'add-account' })
+      else if (kind === 'manage') mailCmd({ type: 'manage' })
+      else if (kind === 'acct') mailCmd({ type: 'account', id: el.dataset.id })
+      else if (kind === 'folder') mailCmd({ type: 'folder', path: el.dataset.path })
+    })
+  })
+}
+
+// Dispatch a sidebar→surface mail command, opening the Email tab first. The
+// desired selection is also stashed on window.__mailNav so a cold-mounting
+// surface can apply it before the live event arrives.
+function mailCmd(detail) {
+  try {
+    const prev = window.__mailNav || {}
+    if (detail.type === 'account') window.__mailNav = { accountId: detail.id, folder: prev.folder || null }
+    else if (detail.type === 'folder') {
+      const acct = (lastMailState && lastMailState.activeAccountId) || prev.accountId || null
+      window.__mailNav = { accountId: acct, folder: detail.path }
+    }
+    tabManager.addTab('@email', 'Email')
+    window.dispatchEvent(new CustomEvent('email:cmd', { detail }))
+  } catch (e) { console.warn('[mail] cmd failed', e) }
+}
+
+window.addEventListener('email:nav-state', (e) => { lastMailState = (e && e.detail) || null; renderMailNav() })
+
+// ── Calendar sidebar: connected CalDAV calendars ─────────────────────────────
+// Paints #sb-cal-connected from calendar:calendars; each row toggles its own
+// visibility (calendar:calendarSetVisible) and nudges the Calendar surface to
+// refetch via a calendar:changed event. The account wizard lives in the surface.
+const CAL_EYE = '<svg viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="2.6" stroke="currentColor" stroke-width="1.5"/></svg>'
+const CAL_EYE_OFF = '<svg viewBox="0 0 24 24" fill="none"><path d="M4 4l16 16M10 5.2A9.7 9.7 0 0112 5c6.5 0 10 7 10 7a17 17 0 01-3 3.6M6.2 7.4A17 17 0 002 12s3.5 7 10 7a9.6 9.6 0 003.3-.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'
+
+async function renderCalendarNav() {
+  const host = document.getElementById('sb-cal-connected')
+  if (!host) return
+  if (!(window.api && window.api.invoke)) { host.innerHTML = ''; return }
+  let cals = []
+  try {
+    const res = await window.api.invoke('calendar:calendars', {})
+    if (res && res.ok) cals = res.calendars || []
+  } catch (_e) { /* offline or calendar IPC not registered */ }
+  if (!cals.length) { host.innerHTML = ''; return }
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+  const isOn = (c) => c.visible !== 0 && c.visible !== false
+  host.innerHTML = cals.map((c) => (
+    `<button class="sb-cal-row${isOn(c) ? '' : ' is-hidden'}" data-cal-id="${esc(c.id)}" title="${esc(c.name || '')}">`
+    + `<span class="sb-dot" style="background:${esc(c.color || '#9B9A97')}"></span>`
+    + `<span class="sb-cal-nm">${esc(c.name || 'Calendar')}</span>`
+    + `<span class="sb-cal-eye">${isOn(c) ? CAL_EYE : CAL_EYE_OFF}</span></button>`
+  )).join('')
+  host.querySelectorAll('[data-cal-id]').forEach((el) => {
+    el.addEventListener('click', async () => {
+      const id = el.dataset.calId
+      const cal = cals.find((c) => String(c.id) === String(id))
+      const next = !(cal && isOn(cal))
+      try {
+        await window.api.invoke('calendar:calendarSetVisible', { calendarId: id, visible: next })
+        window.dispatchEvent(new CustomEvent('calendar:changed', { detail: { calendarId: id } }))
+      } catch (_e) { /* noop */ }
+      renderCalendarNav()
+    })
+  })
+}
+
+// Render a month into the Calendar view's mini-month. Today is marked; clicking
+// a day opens the Calendar surface. `ref` (a Date) drives prev/next navigation.
+let _miniMonthRef = null
+function renderMiniMonth(ref) {
+  const host = document.getElementById('sb-cal-mini')
+  if (!host) return
+  const base = ref instanceof Date ? ref : (_miniMonthRef || new Date())
+  _miniMonthRef = base
+  const year = base.getFullYear()
+  const month = base.getMonth()
+  const today = new Date()
+  const isThisMonth = today.getFullYear() === year && today.getMonth() === month
+  const monthName = base.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+  const firstDow = new Date(year, month, 1).getDay()
+  const dayCount = new Date(year, month + 1, 0).getDate()
+  const dows = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+  let cells = ''
+  for (let i = 0; i < firstDow; i += 1) cells += '<div class="sb-mini-day sb-mini-empty"></div>'
+  for (let d = 1; d <= dayCount; d += 1) {
+    const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+    const isToday = isThisMonth && today.getDate() === d
+    cells += `<div class="sb-mini-day${isToday ? ' is-today' : ''}" data-iso="${iso}">${d}</div>`
+  }
+  host.innerHTML = `
+    <div class="sb-mini-head">
+      <span class="sb-mini-title">${monthName}</span>
+      <div class="sb-mini-nav">
+        <button class="sb-mini-arrow" data-mini="-1" aria-label="Previous month"><svg viewBox="0 0 24 24" fill="none"><path d="M14 7l-5 5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="sb-mini-arrow" data-mini="1" aria-label="Next month"><svg viewBox="0 0 24 24" fill="none"><path d="M10 7l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
+    </div>
+    <div class="sb-mini-grid">
+      ${dows.map((x) => `<div class="sb-mini-dow">${x}</div>`).join('')}
+      ${cells}
+    </div>`
+  host.querySelectorAll('.sb-mini-arrow').forEach((a) => {
+    a.addEventListener('click', () => { renderMiniMonth(new Date(year, month + Number(a.dataset.mini), 1)) })
+  })
+  host.querySelectorAll('.sb-mini-day[data-iso]').forEach((cell) => {
+    cell.addEventListener('click', () => {
+      try { tabManager.addTab('@calendar', 'Calendar') } catch (_e) { /* noop */ }
+    })
+  })
+}
+
 async function showNoFileSelected() {
   console.log('[UI] Showing no-file state')
   currentOpenPath = null
@@ -3584,8 +4428,7 @@ async function showNoFileSelected() {
   const footer = document.querySelector('footer')
   const tabs = document.querySelector('.tabs-header')
   document.querySelectorAll('.tree-item.active, .sidebar-doc-item.active, .sidebar-item.active').forEach(el => el.classList.remove('active'))
-  const homeBtn = document.getElementById('home-btn')
-  if (ENABLE_AI_HOME && homeBtn) homeBtn.classList.add('active')
+  setSidebarView('home')
   if (home) {
       hideContentViews('home-view')
       home.style.display = 'flex'
@@ -3651,8 +4494,7 @@ async function showCompanyBrainPage() {
   
   document.querySelectorAll('.tree-item.active, .sidebar-doc-item.active, .sidebar-item.active').forEach(el => el.classList.remove('active'))
   
-  const brainBtn = document.getElementById('brain-btn')
-  if (brainBtn) brainBtn.classList.add('active')
+  setSidebarView('chat')
 
   hideContentViews('brain-view')
   if (brain) {

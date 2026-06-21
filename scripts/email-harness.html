@@ -1,0 +1,185 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!-- Load the REAL island stylesheet so we verify the actual .pp-mail rules. -->
+<link rel="stylesheet" href="file:///Users/muhammed/Documents/Opus/src/renderer/src/react/island.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  /* Mirror the medusa theme tokens the island vars derive from. */
+  .medusa-island {
+    --border-base: #e6e6e9;
+    --bg-base: #ffffff;
+    --bg-subtle: #fafafa;
+    --bg-base-hover: #f3f3f5;
+    --fg-base: #1f1f23;
+    --fg-subtle: #52525b;
+    --fg-muted: #8a8a93;
+    --bg-interactive: #2383e2;
+    height: 100%;
+  }
+  .ic { width: 16px; height: 16px; display: inline-block; flex: none; }
+  .hdr { height: 52px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 16px; border-bottom: 1px solid var(--pp-line); background: var(--bg-base); }
+  .hdr .sp { background: var(--pp-accent); -webkit-mask: none; }
+  .hdr-title { font-size: 14px; font-weight: 650; color: var(--fg-base); }
+  .hdr-sub { font-size: 12px; color: var(--fg-muted); }
+  .hdr-compose { margin-left: auto; font-size: 13px; font-weight: 600; color: #fff; background: var(--pp-accent); border: 0; border-radius: 8px; padding: 7px 13px; cursor: pointer; }
+  .pp-field { width: 100%; height: 34px; border: 1px solid var(--pp-line); border-radius: 9px; background: var(--bg-base); font-size: 13px; color: var(--fg-base); }
+  .pp-seg { display: flex; gap: 2px; padding: 3px; background: var(--bg-subtle); border: 1px solid var(--pp-line-soft); border-radius: 9px; }
+  .pp-seg-btn { flex: 1; appearance: none; border: 0; background: transparent; font-size: 12.5px; font-weight: 550; color: var(--fg-muted); border-radius: 7px; padding: 5px 0; cursor: pointer; }
+  .pp-seg-btn.on { color: var(--fg-base); background: var(--bg-base); box-shadow: var(--pp-shadow-soft); }
+  .pp-iconbtn { display: inline-grid; place-items: center; width: 30px; height: 30px; border: 0; background: transparent; border-radius: 7px; color: var(--fg-subtle); cursor: pointer; }
+  .pp-iconbtn:hover { background: var(--pp-hover); }
+  .pp-avatar { display: grid; place-items: center; border-radius: 999px; color: #fff; font-size: 12px; font-weight: 700; }
+  .pp-avatar--sm { width: 26px; height: 26px; }
+  .pp-avatar--sq { border-radius: 8px; }
+</style>
+</head>
+<body>
+<div class="medusa-island">
+  <div style="display:flex;flex-direction:column;height:100%;background:var(--bg-subtle)">
+
+    <!-- top bar (AiBar stand-in) -->
+    <div class="hdr">
+      <span class="pp-avatar pp-avatar--sm pp-avatar--sq" style="background:#2383e2">S</span>
+      <div style="display:flex;flex-direction:column;line-height:1.25">
+        <span class="hdr-title">Personal</span>
+        <span class="hdr-sub">sam@fastmail.com</span>
+      </div>
+      <button class="hdr-compose">✎ Compose</button>
+    </div>
+
+    <div class="pp-mail">
+      <!-- ░░ sidebar ░░ -->
+      <aside class="pp-mail-side">
+        <div class="pp-mail-folders">
+          <button class="pp-side-item pp-side-item--active"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7l9 6 9-6M4 5h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1z"/></svg><span class="pp-side-item__label">Inbox</span><span class="pp-side-item__count">12</span></button>
+          <button class="pp-side-item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg><span class="pp-side-item__label">Sent</span></button>
+          <button class="pp-side-item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg><span class="pp-side-item__label">Drafts</span><span class="pp-side-item__count">2</span></button>
+          <button class="pp-side-item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg><span class="pp-side-item__label">Archive</span></button>
+          <button class="pp-side-item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><span class="pp-side-item__label">Junk</span></button>
+          <button class="pp-side-item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg><span class="pp-side-item__label">Trash</span></button>
+          <div class="pp-side-sec">More</div>
+          <button class="pp-side-item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h6l2 2h10v9a2 2 0 01-2 2H3z"/></svg><span class="pp-side-item__label">Receipts</span></button>
+          <button class="pp-side-item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h6l2 2h10v9a2 2 0 01-2 2H3z"/></svg><span class="pp-side-item__label">Newsletters</span><span class="pp-side-item__count">34</span></button>
+        </div>
+        <div class="pp-mail-side-foot">
+          <button class="pp-side-item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg><span class="pp-side-item__label">Add account</span></button>
+          <button class="pp-side-item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.6-2-3.4-2.4 1a7 7 0 00-1.7-1L14.5 3h-4l-.3 2.4a7 7 0 00-1.7 1l-2.4-1-2 3.4 2 1.6a7 7 0 000 2l-2 1.6 2 3.4 2.4-1a7 7 0 001.7 1l.3 2.6h4l.3-2.4a7 7 0 001.7-1l2.4 1 2-3.4-2-1.6a7 7 0 00.1-1z"/></svg><span class="pp-side-item__label">Manage</span></button>
+        </div>
+      </aside>
+
+      <!-- ░░ list ░░ -->
+      <section class="pp-mail-listcol">
+        <div style="display:flex;align-items:center;gap:8px;padding:12px 12px 0">
+          <input class="pp-field" style="padding-left:32px" placeholder="Search or ask (e.g. unread from Sam)">
+          <button class="pp-iconbtn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.5 9a9 9 0 0115-3.4L23 10M1 14l4.5 4.4A9 9 0 0020.5 15"/></svg></button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 12px 0">
+          <div class="pp-seg" style="flex:1">
+            <button class="pp-seg-btn on">All</button><button class="pp-seg-btn">Important</button><button class="pp-seg-btn">Other</button>
+          </div>
+          <button class="pp-iconbtn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.9 4.6L19 9l-4 3.5L16 18l-4-2.5L8 18l1-5.5L5 9l5.1-1.4z"/></svg></button>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 15px 4px">
+          <span style="font-size:11px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;color:var(--fg-muted)">Inbox</span>
+          <span style="font-size:11.5px;color:var(--fg-muted)">128</span>
+        </div>
+
+        <div style="flex:1;min-height:0;overflow-y:auto">
+          <div class="pp-msg-group">Today</div>
+          <ROW from="Linear" subj="Cycle 14 starts Monday" snip="Your team has 9 issues in progress and 4 in review across the workspace…" time="9:42 AM" unread="1" star="0" attach="0"></ROW>
+          <ROW from="Samantha Lee" subj="Re: Q3 budget — colour palette" snip="Looks great. I left a couple of comments on the gradient direction, otherwise ship it." time="9:10 AM" unread="1" star="1" attach="1" active="1"></ROW>
+          <ROW from="GitHub" subj="[Naridon-Inc/paperus] 3 new pull requests" snip="opened by ashiq, mo and one other — review requested on two of them." time="8:31 AM" unread="0" star="0" attach="0"></ROW>
+          <div class="pp-msg-group">Yesterday</div>
+          <ROW from="Stripe" subj="Your June invoice is available" snip="Invoice #A38F2 for $49.00 has been paid automatically with Visa •• 4242." time="Jun 19" unread="0" star="0" attach="1"></ROW>
+          <ROW from="Notion" subj="What's new: AI meeting notes" snip="Capture decisions automatically and turn them into action items in one click." time="Jun 19" unread="0" star="0" attach="0"></ROW>
+          <div class="pp-msg-group">This week</div>
+          <ROW from="Vercel" subj="Deployment ready — paperus-landing" snip="Production deployment for oss.naridon.com completed in 38s." time="Jun 17" unread="0" star="0" attach="0"></ROW>
+          <ROW from="AWS" subj="Your Lightsail instance health" snip="notionless-team is running normally. CPU 4%, 2 alarms cleared." time="Jun 16" unread="0" star="1" attach="0"></ROW>
+          <ROW from="Fastmail" subj="New sign-in from macOS" snip="We noticed a new sign-in to your account from a Mac in Riyadh." time="Jun 16" unread="0" star="0" attach="0"></ROW>
+        </div>
+      </section>
+
+      <!-- ░░ peek (open message) ░░ -->
+      <div class="pp-mail-peek-scrim" id="scrim"></div>
+      <div class="pp-mail-peek" id="peek">
+        <div class="pp-mail-read">
+          <div class="pp-read-head">
+            <div style="display:flex;align-items:flex-start;gap:10px">
+              <button class="pp-iconbtn" style="margin-top:1px"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+              <div class="pp-read-subject" style="flex:1">Re: Q3 budget — colour palette</div>
+              <div style="display:flex;align-items:center;gap:1;flex:none">
+                <button class="pp-iconbtn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 17l-5-5 5-5M4 12h11a5 5 0 015 5v1"/></svg></button>
+                <button class="pp-iconbtn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 8l4 4-4 4M3 12h18"/></svg></button>
+                <span style="width:1px;height:18px;background:var(--pp-line);margin:0 4px"></span>
+                <button class="pp-iconbtn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg></button>
+                <button class="pp-iconbtn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button>
+                <button class="pp-iconbtn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7 7 .5-5.5 4.5L18 21l-6-4-6 4 1.5-7L2 9.5 9 9z"/></svg></button>
+                <span style="width:1px;height:18px;background:var(--pp-line);margin:0 4px"></span>
+                <button style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--fg-base);background:var(--bg-base);border:1px solid var(--pp-line);border-radius:8px;padding:6px 11px;cursor:pointer"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="var(--pp-accent)" stroke-width="2" style="width:14px;height:14px"><path d="M12 3l1.9 4.6L19 9l-4 3.5L16 18l-4-2.5L8 18l1-5.5L5 9l5.1-1.4z"/></svg>Summarize</button>
+              </div>
+            </div>
+            <div class="pp-read-meta">
+              <span class="pp-avatar pp-avatar--sm pp-avatar--sq" style="background:#2383e2">SL</span>
+              <div style="min-width:0;flex:1">
+                <div style="display:flex;flex-wrap:wrap;align-items:baseline;column-gap:8px">
+                  <span style="font-size:13.5px;font-weight:600;color:var(--fg-base)">Samantha Lee</span>
+                  <span style="font-size:12px;color:var(--fg-muted)">samantha@studio.co</span>
+                  <span style="font-size:12px;color:var(--fg-muted);margin-left:auto">Jun 20, 2026, 9:10 AM</span>
+                </div>
+                <div style="font-size:12px;color:var(--fg-muted);margin-top:2px">To: sam@fastmail.com</div>
+              </div>
+            </div>
+          </div>
+          <div class="pp-read-body">
+            <div style="max-width:760px;margin:0 auto">
+              <div class="pp-read-card" style="padding:20px">
+                <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:var(--fg-base)">Hi Sam,</p>
+                <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:var(--fg-base)">Looks great. I left a couple of comments on the gradient direction — I think the blue-to-teal reads a touch cooler than the mock, but it's close. Otherwise ship it.</p>
+                <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:var(--fg-base)">One thing: can we bump the card contrast slightly for the light theme? The white-on-white edges disappear on my display.</p>
+                <p style="margin:0;font-size:14px;line-height:1.6;color:var(--fg-base)">Thanks,<br>Sam</p>
+              </div>
+              <div style="margin-top:20px;border-top:1px solid var(--pp-line);padding-top:16px">
+                <button style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--fg-subtle);background:transparent;border:0;cursor:pointer"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="var(--pp-accent)" stroke-width="2" style="width:14px;height:14px"><path d="M12 3l1.9 4.6L19 9l-4 3.5L16 18l-4-2.5L8 18l1-5.5L5 9l5.1-1.4z"/></svg>Suggest quick replies</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Expand the <ROW> custom placeholders into real .pp-msg markup.
+  const star = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M12 2l3 7 7 .5-5.5 4.5L18 21l-6-4-6 4 1.5-7L2 9.5 9 9z"/></svg>'
+  const starSolid = '<svg viewBox="0 0 24 24" fill="#d97706" stroke="#d97706" stroke-width="1" style="width:14px;height:14px"><path d="M12 2l3 7 7 .5-5.5 4.5L18 21l-6-4-6 4 1.5-7L2 9.5 9 9z"/></svg>'
+  const clip = '<svg viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2" style="width:13px;height:13px"><path d="M21 11l-9 9a5 5 0 01-7-7l9-9a3.5 3.5 0 015 5l-9 9a2 2 0 01-3-3l8-8"/></svg>'
+  document.querySelectorAll('ROW').forEach((r) => {
+    const a = (k) => r.getAttribute(k)
+    const unread = a('unread') === '1'
+    const active = a('active') === '1'
+    const starred = a('star') === '1'
+    const el = document.createElement('div')
+    el.className = 'pp-msg' + (active ? ' pp-msg--active' : '') + (unread ? ' pp-msg--unread' : '')
+    el.innerHTML =
+      '<div class="pp-msg-lead">' +
+        (unread ? '<span class="pp-msg-unread-dot"></span>' : '<span style="width:8px;height:8px"></span>') +
+        '<button class="pp-iconbtn" style="width:22px;height:22px;color:' + (starred ? '#d97706' : '#c4c4cc') + '">' + (starred ? starSolid : star) + '</button>' +
+      '</div>' +
+      '<div class="pp-msg-body">' +
+        '<div class="pp-msg-row1">' +
+          '<span class="pp-msg-from">' + a('from') + '</span>' +
+          (a('attach') === '1' ? clip : '') +
+          '<span class="pp-msg-time">' + a('time') + '</span>' +
+        '</div>' +
+        '<div class="pp-msg-subject">' + a('subj') + '</div>' +
+        '<div class="pp-msg-snippet">' + a('snip') + '</div>' +
+      '</div>'
+    r.replaceWith(el)
+  })
+</script>
+</body>
+</html>

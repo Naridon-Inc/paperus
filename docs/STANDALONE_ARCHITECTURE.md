@@ -5,6 +5,10 @@ Paperus is a **standalone, local-first** application: it works fully offline wit
 describes how the app runs on its own and how optional peer-to-peer collaboration
 is layered on top without introducing a backend that stores anything.
 
+> Note: this file previously documented an unrelated account-based SaaS
+> ("Naridon" Webflow/Shopify) architecture. That content was obsolete and did
+> not describe Paperus; it has been replaced.
+
 ## 1. What "standalone" means
 
 - **No accounts.** There is no sign-up, no email/OAuth login, no JWT, and no

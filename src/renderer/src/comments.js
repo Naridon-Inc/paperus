@@ -158,7 +158,7 @@ export class CommentManager {
 
     this.popover.innerHTML = `
       <div class="cp-new">
-        <div class="cp-quoted">"${this._esc(quotedText.substring(0, 120))}${quotedText.length > 120 ? '...' : ''}"</div>
+        <div class="cp-quoted">"${this._mdInline(quotedText.substring(0, 120))}${quotedText.length > 120 ? '...' : ''}"</div>
         <textarea class="cp-input" placeholder="Add a comment..." autofocus></textarea>
         <div class="cp-footer">
           <button class="cp-btn cp-cancel">Cancel</button>
@@ -237,7 +237,7 @@ export class CommentManager {
             <button class="cp-action-btn cp-delete" title="Delete"><i class="fas fa-trash"></i></button>
           </div>
         </div>
-        ${comment.quotedText ? `<div class="cp-quoted">"${this._esc(comment.quotedText.substring(0, 100))}${comment.quotedText.length > 100 ? '...' : ''}"</div>` : ''}
+        ${comment.quotedText ? `<div class="cp-quoted">"${this._mdInline(comment.quotedText.substring(0, 100))}${comment.quotedText.length > 100 ? '...' : ''}"</div>` : ''}
         <div class="cp-text">${this._fmt(comment.content)}</div>
         ${replies ? `<div class="cp-replies">${replies}</div>` : ''}
         ${reminderRow}
@@ -503,7 +503,7 @@ export class CommentManager {
       const snippetSrc = c.quotedText
         || (range && this.view ? this.view.state.doc.sliceString(range.from, range.to) : '')
       const snippet = snippetSrc
-        ? `<div class="cpl-snippet">"${this._esc(snippetSrc.substring(0, 80))}${snippetSrc.length > 80 ? '...' : ''}"</div>`
+        ? `<div class="cpl-snippet">"${this._mdInline(snippetSrc.substring(0, 80))}${snippetSrc.length > 80 ? '...' : ''}"</div>`
         : '<div class="cpl-snippet cpl-orphan">(text removed)</div>'
       const replyCount = Array.isArray(c.replies) ? c.replies.length : 0
       const replyLabel = replyCount
@@ -580,8 +580,36 @@ export class CommentManager {
     return d.innerHTML
   }
 
+  // Render a short Markdown snippet inline (bold/italic/code/strike/highlight/
+  // links). Safe against HTML injection: the text is HTML-escaped first, then a
+  // small set of inline Markdown patterns is turned into tags. Used for comment
+  // quotes/snippets and bodies so `**bold**` etc. render instead of showing the
+  // raw markers (the quoted text is a slice of the Markdown document).
+  _mdInline(text) {
+    let s = this._esc(text == null ? '' : String(text))
+    // Pull code spans out first so their contents aren't reformatted.
+    const codes = []
+    s = s.replace(/`([^`]+)`/g, (_m, c) => {
+      codes.push(c)
+      return `${codes.length - 1}`
+    })
+    s = s
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/__([^_]+)__/g, '<strong>$1</strong>')
+      .replace(/(^|[^*])\*([^*\s][^*]*?)\*/g, '$1<em>$2</em>')
+      .replace(/(^|[^_\w])_([^_\s][^_]*?)_/g, '$1<em>$2</em>')
+      .replace(/~~([^~]+)~~/g, '<del>$1</del>')
+      .replace(/==([^=]+)==/g, '<mark>$1</mark>')
+      .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_m, t, href) => (
+        /^(https?:|mailto:|doc:|#)/i.test(href) ? `<a href="${href}">${t}</a>` : t
+      ))
+    // Restore code spans.
+    s = s.replace(/(\d+)/g, (_m, i) => `<code>${codes[Number(i)]}</code>`)
+    return s
+  }
+
   _fmt(text) {
-    return this._esc(text).replace(/@(\w+)/g, '<span class="mention">@$1</span>')
+    return this._mdInline(text).replace(/@(\w+)/g, '<span class="mention">@$1</span>')
   }
 
   _relTime(ts) {

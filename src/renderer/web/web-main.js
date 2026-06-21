@@ -1,5 +1,6 @@
 import { fileSystem } from '../src/filesystem-proxy'
 import { ensureAccount } from './account-gate'
+import { mountAdminPanel } from './admin-panel'
 
 /**
  * Web Platform Bootstrap
@@ -422,7 +423,11 @@ async function bootstrap() {
 
     await fileSystem.init();
     await import('../src/main.js');
-    console.log('[Web] Notionless Bootstrapped with Full Feature Parity');
+    console.log('[Web] Paperus Bootstrapped with Full Feature Parity');
+
+    // If this instance runs with accounts on and the signed-in user is an admin,
+    // surface the Members control (invite/manage users). No-op otherwise.
+    mountAdminPanel().catch(() => {});
 }
 
 bootstrap();

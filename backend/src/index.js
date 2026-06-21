@@ -46,14 +46,30 @@ app.post('/api/collect', express.text({ type: '*/*', limit: '8kb' }), (req, res)
   res.sendStatus(204);
 });
 
-// CORS Configuration
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
-    callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true,
+// CORS Configuration.
+//
+// The self-hosted web app is served from the SAME origin as the relay (Caddy
+// reverse-proxies /api, /signaling, /yjs to it), so a browser POST carries
+// `Origin: https://<your-domain>`. We must accept that automatically on ANY
+// self-host domain — otherwise sign-in POSTs 500 with an empty ALLOWED_ORIGINS
+// (a same-origin GET sends no Origin, so it slips through, which is what made
+// this easy to miss). We resolve options per-request so we can compare the
+// Origin against the request's own Host (same-origin) without any config; the
+// explicit ALLOWED_ORIGINS list still covers genuine cross-origin callers.
+app.use(cors((req, callback) => {
+  const host = req.headers.host;
+  const reqOrigin = req.headers.origin;
+  const sameOrigin = !!reqOrigin && !!host
+    && (reqOrigin === `https://${host}` || reqOrigin === `http://${host}`);
+  callback(null, {
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true); // non-browser / same-origin GET
+      if (sameOrigin) return cb(null, true); // web app → its own relay, any domain
+      if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+      return cb(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+  });
 }));
 
 // Health Check
@@ -107,9 +123,93 @@ app.post('/api/account/logout', (req, res) => {
 
 app.get('/api/account/me', (req, res) => {
   if (!accounts.ENABLED) return res.status(404).json({ error: 'accounts_disabled' });
-  const u = accounts.userFromReq(req);
+  const u = accounts.currentUser(req);
   if (!u) return res.status(401).json({ error: 'unauthorized' });
-  return res.json({ user: { id: u.uid, email: u.email, role: u.role } });
+  return res.json({ user: { id: u.id, email: u.email, role: u.role } });
+});
+
+// --- Admin management (super-admin only) -----------------------------------
+// Every route below is gated on an enabled `admin` session. This is how a
+// self-hosted instance is actually administered: list members, invite or create
+// users (so a "closed" instance can grow past its first account), disable/delete,
+// reset passwords, and promote/demote. Guard rails in accounts.js prevent locking
+// out the last admin. None of this touches note content — still E2EE end to end.
+function requireAdmin(req, res) {
+  if (!accounts.ENABLED) { res.status(404).json({ error: 'accounts_disabled' }); return null; }
+  const admin = accounts.adminFromReq(req);
+  if (!admin) { res.status(403).json({ error: 'forbidden' }); return null; }
+  return admin;
+}
+
+function originOf(req) {
+  const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0].trim();
+  const host = req.headers['x-forwarded-host'] || req.headers.host || '';
+  return host ? `${proto}://${host}` : '';
+}
+
+app.get('/api/admin/users', (req, res) => {
+  if (!requireAdmin(req, res)) return undefined;
+  return res.json({ users: accounts.listUsers(), invites: accounts.listInvites() });
+});
+
+app.post('/api/admin/users', jsonBody, (req, res) => {
+  if (!requireAdmin(req, res)) return undefined;
+  const r = accounts.adminCreateUser(req.body || {});
+  if (!r.ok) return res.status(400).json({ error: r.error });
+  return res.json({ user: r.user });
+});
+
+app.post('/api/admin/invite', jsonBody, (req, res) => {
+  if (!requireAdmin(req, res)) return undefined;
+  const { email, role, ttlHours } = req.body || {};
+  const ttlMs = ttlHours ? Math.max(1, Number(ttlHours)) * 3600 * 1000 : undefined;
+  const r = accounts.createInvite({ email, role, ttlMs });
+  const origin = originOf(req);
+  const url = origin ? `${origin}/?invite=${r.token}` : `/?invite=${r.token}`;
+  return res.json({ invite: r.invite, token: r.token, url });
+});
+
+app.post('/api/admin/revoke-invite', jsonBody, (req, res) => {
+  if (!requireAdmin(req, res)) return undefined;
+  accounts.revokeInvite((req.body || {}).id);
+  return res.json({ ok: true });
+});
+
+app.post('/api/admin/disable', jsonBody, (req, res) => {
+  const admin = requireAdmin(req, res);
+  if (!admin) return undefined;
+  const { id, disabled } = req.body || {};
+  if (id === admin.id && disabled) return res.status(400).json({ error: 'cannot_disable_self' });
+  const r = accounts.setDisabled(id, disabled);
+  if (!r.ok) return res.status(400).json({ error: r.error });
+  return res.json({ user: r.user });
+});
+
+app.post('/api/admin/set-role', jsonBody, (req, res) => {
+  const admin = requireAdmin(req, res);
+  if (!admin) return undefined;
+  const { id, role } = req.body || {};
+  if (id === admin.id && role !== 'admin') return res.status(400).json({ error: 'cannot_demote_self' });
+  const r = accounts.setRole(id, role);
+  if (!r.ok) return res.status(400).json({ error: r.error });
+  return res.json({ user: r.user });
+});
+
+app.post('/api/admin/reset-password', jsonBody, (req, res) => {
+  if (!requireAdmin(req, res)) return undefined;
+  const { id, password } = req.body || {};
+  const r = accounts.resetPassword(id, password);
+  if (!r.ok) return res.status(400).json({ error: r.error });
+  return res.json({ user: r.user });
+});
+
+app.delete('/api/admin/users/:id', (req, res) => {
+  const admin = requireAdmin(req, res);
+  if (!admin) return undefined;
+  if (req.params.id === admin.id) return res.status(400).json({ error: 'cannot_delete_self' });
+  const r = accounts.deleteUser(req.params.id);
+  if (!r.ok) return res.status(400).json({ error: r.error });
+  return res.json({ ok: true });
 });
 
 // Static landing page (the public face of oss.naridon.com). This is purely
@@ -160,6 +260,17 @@ app.use((err, req, res, next) => {
   }
   res.status(500).json({ error: 'Internal Server Error' });
 });
+
+// Seed the deterministic root admin (ACCOUNTS_ADMIN_EMAIL/PASSWORD) on first boot
+// so a fresh instance comes up with a known super-admin instead of an open
+// "first signup wins admin" race. No-op once any user exists.
+if (accounts.ENABLED) {
+  try {
+    logger.info('accounts', `bootstrap: ${accounts.bootstrap()}`);
+  } catch (e) {
+    logger.error('accounts', 'bootstrap failed', { error: e.message });
+  }
+}
 
 server.listen(PORT, () => {
   logger.info('server', `Signaling relay running on port ${PORT}`);

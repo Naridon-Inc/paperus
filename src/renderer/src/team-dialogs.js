@@ -239,10 +239,10 @@ export function openClaimDialog(manager, teamId, { afterClaim } = {}) {
 export function openInviteDialog(manager, teamId) {
   const link = manager.inviteLink(teamId)
   const code = manager.inviteCode(teamId)
-  const dl = (Config && Config.DOWNLOAD_URL) || 'https://github.com/Naridon-Inc/notionless/releases/latest'
+  const dl = (Config && Config.DOWNLOAD_URL) || 'https://github.com/Naridon-Inc/paperus/releases/latest'
   const { box, close } = modal(`
     <h3>Invite to “${esc(manager.getName(teamId))}”</h3>
-    <p class="td-sub">Share this link. It opens the Notionless desktop app and joins them instantly — they pick their own username, no account needed. Treat it like a key: it grants full access to the workspace.</p>
+    <p class="td-sub">Share this link. It opens the Paperus desktop app and joins them instantly — they pick their own username, no account needed. Treat it like a key: it grants full access to the workspace.</p>
     <div class="td-linkbox">
       <input id="td-invite-link" readonly value="${esc(link)}" />
       <button class="td-btn primary" id="td-copy-link">Copy link</button>
@@ -252,7 +252,7 @@ export function openInviteDialog(manager, teamId) {
       <input id="td-invite-code" readonly value="${esc(code)}" />
       <button class="td-btn" id="td-copy-code">Copy code</button>
     </div>
-    <p class="td-sub" style="margin:12px 0 0;font-size:11px;">Don't have the app yet? Install it first, then open the link: <a href="${esc(dl)}" target="_blank" rel="noopener">Download Notionless for Mac</a></p>
+    <p class="td-sub" style="margin:12px 0 0;font-size:11px;">Don't have the app yet? Install it first, then open the link: <a href="${esc(dl)}" target="_blank" rel="noopener">Download Paperus for Mac</a></p>
     <div class="td-actions"><button class="td-btn" id="td-done">Done</button></div>`)
   box.querySelector('#td-done').onclick = close
   const copy = async (val, btn, label) => {

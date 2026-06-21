@@ -26,7 +26,7 @@ Flags:
 
 ## Usage (programmatic)
 
-The in-app **Plugin Lab** (`plugin:scaffold`) reuses this same engine, so a
+The host reuses this same engine over the `plugin:scaffold` IPC channel, so a
 plugin scaffolded from the CLI is identical to one scaffolded in-app.
 
 ```js

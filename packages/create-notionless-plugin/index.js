@@ -2,16 +2,16 @@
 /**
  * @notionless/create-notionless-plugin
  *
- * Scaffolder for Notionless plugins. Two faces:
+ * Scaffolder for Paperus plugins. Two faces:
  *
  *  1. CLI  — `npm create @notionless/plugin` (or `create-notionless-plugin`):
  *            prompts for id / name / template, copies a template tree into the
  *            target dir, performs token substitution, and prints next steps.
  *
  *  2. API  — `import { scaffold, TEMPLATES, renderTemplate } from
- *            '@notionless/create-notionless-plugin'`. Used by the in-app Plugin
- *            Lab (`plugin:scaffold` in plugin-manager.js) so the host reuses the
- *            EXACT same template engine. `scaffold()` never prompts.
+ *            '@notionless/create-notionless-plugin'`. Reused by the host (via the
+ *            `plugin:scaffold` IPC channel in plugin-manager.js) so an in-app
+ *            scaffold uses the EXACT same template engine. `scaffold()` never prompts.
  *
  * Templates live in ./templates/<template>/ and mirror examples/plugins/*. Each
  * file may contain mustache-style tokens substituted from the options:
@@ -148,7 +148,7 @@ function listFiles(dir, base = dir) {
 }
 
 // ---------------------------------------------------------------------------
-// Core scaffold (no prompting, no process exit) — reused by CLI + Plugin Lab
+// Core scaffold (no prompting, no process exit) — reused by CLI + host (plugin:scaffold)
 // ---------------------------------------------------------------------------
 
 /**
@@ -260,7 +260,7 @@ async function runCli() {
   const args = parseArgv(process.argv.slice(2))
 
   if (args.help || args.h) {
-    process.stdout.write(`create-notionless-plugin — scaffold a Notionless plugin
+    process.stdout.write(`create-notionless-plugin — scaffold a Paperus plugin
 
 Usage:
   npm create @notionless/plugin
@@ -294,7 +294,7 @@ Options:
   let name = args.name
 
   if (interactive) {
-    process.stdout.write('\nCreate a Notionless plugin\n\n')
+    process.stdout.write('\nCreate a Paperus plugin\n\n')
     if (!template) {
       process.stdout.write(`Templates: ${Object.keys(TEMPLATES).join(', ')}\n`)
       template = await ask('Template:', 'word-count')
@@ -331,8 +331,9 @@ Options:
   process.stdout.write('Files:\n')
   for (const f of result.files) process.stdout.write(`  ${f}\n`)
   process.stdout.write(`\nNext steps:
-  1. Copy this folder into your Notionless plugins dir, or enable dev hot-reload.
-  2. Edit index.js, then reload the plugin from Settings -> Plugins.
+  1. Copy this folder into your Paperus plugins dir (open it via the account
+     menu ▸ Developer ▸ Plugins… ▸ "Open plugins folder").
+  2. Edit index.js, then reload the plugin from the Plugins… panel.
   3. Read docs/PLUGIN_API_CONTRACT.md for the full ctx API.
 \n`)
 }

@@ -138,7 +138,7 @@
   display: none;
 }
 
-/* Inline Diff Styles */
+/* Inline Diff Styles (legacy word-diff) */
 .diff-added {
   background-color: #e6ffec;
   color: #24292e;
@@ -151,6 +151,35 @@
   text-decoration: line-through;
   opacity: 0.7;
 }
+
+/* Rendered version diff: markdown is rendered to real HTML (headings, tables,
+   lists, code), then each top-level block is tinted by change type. Block-level
+   so every block stays valid HTML. */
+.history-preview-content.rendered-diff {
+  white-space: normal; /* override the preview's pre-wrap so rendered HTML flows */
+}
+.rendered-diff .rd-added,
+.rendered-diff .rd-removed {
+  display: block;
+  border-radius: 4px;
+  padding: 2px 12px;
+  margin: 3px 0;
+}
+.rendered-diff .rd-added {
+  background: #e6ffec;
+  box-shadow: inset 3px 0 0 #2ea043;
+}
+.rendered-diff .rd-removed {
+  background: #ffebe9;
+  box-shadow: inset 3px 0 0 #d1242f;
+  opacity: 0.6;
+}
+/* Tables/lists keep their own rendering inside a tinted block. */
+.rendered-diff table { border-collapse: collapse; margin: 6px 0; }
+.rendered-diff th, .rendered-diff td { border: 1px solid #ddd; padding: 4px 8px; }
+.rendered-diff pre { background: #f6f8fa; padding: 10px 12px; border-radius: 6px; overflow-x: auto; }
+.rendered-diff code { background: rgba(135,131,120,0.15); padding: 1px 4px; border-radius: 3px; font-size: 85%; }
+.rendered-diff pre code { background: none; padding: 0; }
 
 /* Adjust main layout when drawer is open */
 .main {

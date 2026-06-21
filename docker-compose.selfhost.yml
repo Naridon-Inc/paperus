@@ -44,6 +44,11 @@ services:
       - ACCOUNTS_ENABLED=${NL_ACCOUNTS:-}
       - ACCOUNTS_SIGNUP=${NL_ACCOUNTS_SIGNUP:-open}
       - ACCOUNTS_STRICT=${NL_ACCOUNTS_STRICT:-}
+      # Deterministic ROOT admin, seeded on first boot (when 0 users exist) so the
+      # instance never has an open "first signup wins admin" window. No-op on
+      # later boots. Strongly recommended for a closed/strict instance.
+      - ACCOUNTS_ADMIN_EMAIL=${NL_ADMIN_EMAIL:-}
+      - ACCOUNTS_ADMIN_PASSWORD=${NL_ADMIN_PASSWORD:-}
       # Set a fixed secret so sessions survive relay restarts. openssl rand -hex 32
       - ACCOUNTS_SECRET=${NL_ACCOUNTS_SECRET:-}
       - ACCOUNTS_DIR=/data/accounts

@@ -395,7 +395,7 @@ export function createPluginStudio(deps) {
     } catch (_) {}
     if (!caps) { try { caps = buildCapabilitiesMarkdown(controller) } catch (_) {} }
     return [
-      'You are an expert Notionless plugin author building a plugin in this workspace.',
+      'You are an expert Paperus plugin author building a plugin in this workspace.',
       'Conform exactly to the frozen Plugin API (apiVersion "1").',
       '',
       caps,
@@ -562,7 +562,7 @@ export function createPluginStudio(deps) {
         el('div', {
           class: 'studio-unsupported-sub',
           text: 'Studio runs coding agents on your machine inside a sandboxed workspace folder. '
-            + 'Open Notionless on the desktop to build plugins here.',
+            + 'Open Paperus on the desktop to build plugins here.',
         }),
       ]),
     )

@@ -1,7 +1,7 @@
 {
   "name": "@notionless/create-notionless-plugin",
   "version": "1.0.0",
-  "description": "Scaffolder for Notionless plugins. `npm create @notionless/plugin` writes a working plugin from a template. Also reusable programmatically by the in-app Plugin Lab (plugin:scaffold).",
+  "description": "Scaffolder for Paperus plugins. `npm create @notionless/plugin` writes a working plugin from a template. Also reusable programmatically by the host via the plugin:scaffold IPC channel.",
   "license": "MIT",
   "type": "module",
   "main": "index.js",

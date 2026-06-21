@@ -30,7 +30,7 @@ import FS from '@isomorphic-git/lightning-fs'
 const fs = new FS('notionless-git')
 const DIR = '/repo'
 
-const DEFAULT_AUTHOR = { name: 'Notionless', email: 'notes@notionless.local' }
+const DEFAULT_AUTHOR = { name: 'Paperus', email: 'notes@notionless.local' }
 
 function onAuth(token) {
   // GitHub/GitLab accept a token as the HTTP basic username.

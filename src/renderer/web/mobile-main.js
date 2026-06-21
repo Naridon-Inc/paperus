@@ -580,7 +580,7 @@ async function bootCompanion(creds) {
     wireForegroundLifecycle()
     registerServiceWorker()
 
-    console.log('[Mobile] Notionless companion booted (leaf, foreground-only)')
+    console.log('[Mobile] Paperus companion booted (leaf, foreground-only)')
 }
 
 // ── Hard gate ────────────────────────────────────────────────────────────────

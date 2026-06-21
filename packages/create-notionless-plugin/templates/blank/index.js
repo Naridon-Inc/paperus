@@ -3,7 +3,7 @@ import { definePlugin } from '@notionless/plugin-sdk'
 /**
  * {{name}} — {{description}}
  *
- * A minimal Notionless plugin. Grow it by registering contributions on `ctx`
+ * A minimal Paperus plugin. Grow it by registering contributions on `ctx`
  * inside activate(). See docs/PLUGIN_API_CONTRACT.md for the full ctx API.
  */
 export default definePlugin({

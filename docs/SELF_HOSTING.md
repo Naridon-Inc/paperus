@@ -255,11 +255,42 @@ note). If you'd rather gate the instance to your team, turn accounts on:
 NL_ACCOUNTS=1
 NL_ACCOUNTS_SIGNUP=open                  # or "closed" (admin-added users only)
 NL_ACCOUNTS_SECRET=<openssl rand -hex 32>  # so logins survive restarts
+# Recommended: seed a known super-admin instead of "first signup wins admin"
+NL_ADMIN_EMAIL=you@yourcompany.com
+NL_ADMIN_PASSWORD=<a strong password>
 ```
 
-Now the web app shows an email/password screen first. **The first account created
-becomes the admin.** With `open` signup, teammates self-serve; with `closed`,
-only the admin account is self-served and others are added by the admin.
+Now the web app shows an email/password screen first. With `open` signup,
+teammates self-serve; with `closed`, only invited/admin-added users get in.
+
+### The root (super-admin)
+
+Set **`NL_ADMIN_EMAIL` + `NL_ADMIN_PASSWORD`** and the instance **seeds that
+account as the admin on its very first boot** (when zero users exist). This is
+the recommended path: every deployment comes up with a *known* super-admin, so
+there's never an open window where "whoever signs up first becomes admin" — a
+real risk on a public URL with a `closed`/`strict` instance. Re-deploying is a
+no-op once any account exists, so it never clobbers a real password.
+
+If you *don't* set those vars, the **first account created via the sign-in
+screen becomes the admin** (the older behaviour) — fine for a private link, but
+claim it immediately so a stranger can't.
+
+### Managing members (the admin panel)
+
+Signed in as an admin, a **Members** button appears (bottom-left of the web app).
+From there you can:
+
+- **Invite by link** — generates a single-use link (`/?invite=…`, optionally
+  pinned to one email, member or admin). The invitee sets their own password.
+  This is how a **`closed`** instance grows past its first account.
+- **Add user directly** — create an account with a temporary password you hand
+  out of band.
+- **Disable / enable**, **reset password**, **promote / demote** (member ⇄
+  admin), and **delete** users.
+
+Guard rails prevent locking yourself out: you can't disable, demote, or delete
+the **last** admin (or your own account in a way that strands the instance).
 
 ### The honest constraint (important)
 
@@ -297,17 +328,41 @@ either way — the box only ever holds ciphertext. Deep dive:
 
 ---
 
-## Connecting the desktop app to your relay
+## Connecting the desktop app to your server
 
-The desktop app defaults to the official relay. To point a build at yours, set the
-signaling URL at build time:
+The desktop app ships pointed at Naridon's free global relay (`oss.naridon.com`)
+so it works out of the box. To move a team onto **their own** server, there's
+nothing to rebuild — it's a runtime setting the team manages from inside the app.
+
+**In-app (recommended — no rebuild, team-managed):**
+
+1. In the sidebar, next to **Teams**, click the **server** icon
+   (<kbd>⛁</kbd> "Connect to your team's server"). It's also reachable from the
+   per-team sync dot → **Team server → Connect**.
+2. Enter your server address — e.g. `https://docs.yourcompany.com`.
+3. Leave **"Keep my notes available 24/7"** checked to also use the always-on
+   encrypted relay (`/yjs`) from the full self-host bundle; uncheck it for a
+   **signaling-only** relay (this device stays pure peer-to-peer).
+4. **Connect.** The app reloads and from then on brokers peers (and, if enabled,
+   mirrors encrypted notes) **only through your server** — nothing depends on
+   Naridon. To go back, open the dialog and choose **Use Naridon's free relay**.
+
+Under the hood this stores one value the app reads at startup; the signaling path
+(`/signaling`) and the always-on relay path (`/yjs`) are derived from the one
+address, so a team only ever pastes a single URL. Every teammate does this once
+on their own machine — it's per-client and never leaves the device.
+
+**Build-time (optional — bake a custom default into your own installers):**
 
 ```bash
 VITE_SIGNALING_URL="wss://docs.yourcompany.com/signaling" pnpm run dist
 ```
 
+This only changes the *default* relay for a build you distribute yourself; the
+in-app setting above still overrides it per teammate.
+
 (Or distribute the web app — `https://docs.yourcompany.com` — which needs no
-install and is already wired to your relay.)
+install and is already wired to your server at its own origin.)
 
 ---
 
@@ -323,8 +378,10 @@ Everything is driven by `.env` (copied from `.env.selfhost.example`):
 | `NL_PERSIST_DIR` | _(unset → `/data` in online mode)_ | Advanced: relay's encrypted-state folder. Leave blank; `NL_MODE` sets it. |
 | `NL_CLOUD_SYNC_URL` | _(unset → `/yjs` in online mode)_ | Advanced: where clients mirror. Leave blank; set only to point at a different box. |
 | `NL_ACCOUNTS` | _(off)_ | `1` shows the email/password sign-in gate. |
-| `NL_ACCOUNTS_SIGNUP` | `open` | `open` (self-serve) or `closed` (admin-added). |
+| `NL_ACCOUNTS_SIGNUP` | `open` | `open` (self-serve) or `closed` (invite/admin-added). |
 | `NL_ACCOUNTS_STRICT` | _(off)_ | `1` also rejects unauthenticated sync. |
+| `NL_ADMIN_EMAIL` | _(unset)_ | Seed a known super-admin on first boot. Recommended for `closed`/`strict`. |
+| `NL_ADMIN_PASSWORD` | _(unset)_ | Password for the seeded super-admin (set both, or neither). |
 | `NL_ACCOUNTS_SECRET` | random | Session-signing secret; set it so logins survive restarts. |
 | `NL_DOWNLOAD_URL` | official release | Where the in-app "Download desktop app" buttons point. |
 | `NL_ALLOWED_ORIGINS` | _(none)_ | Extra web origins allowed to call the relay API. |

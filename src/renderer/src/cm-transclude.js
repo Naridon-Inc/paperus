@@ -24,6 +24,7 @@
  * a graceful "transclusion unavailable" note instead of attempting a read.
  */
 import { WidgetType } from '@codemirror/view'
+import { renderInline } from './cm-inline-render'
 
 // A whole line that is exactly ![[Page Name]] (optionally with surrounding ws).
 export const TRANSCLUDE_RE = /^\s*!\[\[([^\[\]|#]+?)(?:#[^\[\]|]*)?\]\]\s*$/
@@ -70,17 +71,14 @@ function renderLine(line) {
   if (heading) {
     const h = document.createElement('div')
     h.className = `cm-transclude-h cm-transclude-h${heading[1].length}`
-    h.textContent = heading[2]
+    h.innerHTML = renderInline(heading[2])
     return h
   }
   const trimmed = line.trim()
   if (trimmed === '') { div.innerHTML = '&nbsp;'; return div }
-  // Minimal inline formatting: bold/italic/code stripped of markers.
-  div.textContent = line
-    .replace(/^\s*[-*+]\s+/, '• ')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/\*([^*]+)\*/g, '$1')
+  // Render inline markdown + math; turn list markers into a bullet glyph.
+  const bullet = line.match(/^\s*[-*+]\s+(.*)$/)
+  div.innerHTML = bullet ? `• ${renderInline(bullet[1])}` : renderInline(line)
   return div
 }
 

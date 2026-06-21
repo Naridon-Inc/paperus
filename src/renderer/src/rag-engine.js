@@ -17,6 +17,90 @@ const STOP_WORDS = new Set([
   'youre', 'youve', 'your', 'yours', 'yourself', 'yourselves'
 ])
 
+// ── Model catalogs for the in-composer model picker ──────────────────────────
+// Per-backend *suggested* models. These are starting points only — every backend
+// that allows a custom value lets the user type any model name, so the lists
+// going stale never blocks anyone. Designed to extend: drop a new agent into
+// CLI_MODELS / CLI_MODEL_FLAG and its models appear in the picker automatically.
+
+// Claude Code rides the user's Claude sign-in; `--model` accepts these aliases.
+const CLAUDE_MODELS = [
+  { id: '', label: 'Default', desc: 'your plan' },
+  { id: 'opus', label: 'Claude Opus', desc: 'most capable' },
+  { id: 'sonnet', label: 'Claude Sonnet', desc: 'balanced' },
+  { id: 'haiku', label: 'Claude Haiku', desc: 'fastest' },
+]
+
+// Other coding-agent CLIs we can pass a model to (main `ai:cli-run` adds the flag).
+const CLI_MODELS = {
+  gemini: [
+    { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+    { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+  ],
+  'cursor-agent': [
+    { id: 'sonnet', label: 'Claude Sonnet' },
+    { id: 'gpt-5', label: 'GPT-5' },
+  ],
+  opencode: [],
+  aider: [],
+}
+// The CLI flag each agent uses to choose a model (default `-m`).
+const CLI_MODEL_FLAG = { gemini: '-m', 'cursor-agent': '-m', opencode: '-m', aider: '--model' }
+
+// API providers (OpenAI-compatible). Used as fallback/extra suggestions when the
+// provider's live `/models` endpoint isn't reachable.
+const API_MODELS = {
+  openai: ['gpt-4o', 'gpt-4o-mini', 'o4-mini', 'o3'],
+  anthropic: ['claude-3-7-sonnet-latest', 'claude-3-5-sonnet-latest', 'claude-3-5-haiku-latest'],
+  gemini: ['gemini-2.0-flash', 'gemini-2.5-pro', 'gemini-1.5-pro'],
+  openrouter: ['anthropic/claude-3.7-sonnet', 'openai/gpt-4o', 'google/gemini-2.0-flash-001'],
+}
+
+// Reasoning-effort levels we can pass to an OpenAI-compatible provider via the
+// `reasoning_effort` request field. Surfaced in the picker only for models that
+// actually take it, and only wired on the `api` backend where we can send it.
+const EFFORT_LEVELS = ['minimal', 'low', 'medium', 'high']
+
+// Claude Code's own session effort levels (`claude --effort <level>`). Session-
+// level, so they apply to whichever Claude model the CLI resolves.
+const CLAUDE_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max']
+
+// Best-effort service identity for a model id, so the picker can show the real
+// brand mark (Claude / OpenAI / Gemini / Ollama) next to each model name. Returns
+// '' (caller falls back to the backend's own logo) when nothing matches.
+function modelService(id) {
+  const s = String(id || '').toLowerCase()
+  if (/(claude|opus|sonnet|haiku)/.test(s)) return 'claude'
+  if (/((^|[^a-z])o\d|gpt|chatgpt|davinci|openai)/.test(s)) return 'openai'
+  if (/(gemini|gemma|bison|palm)/.test(s)) return 'gemini'
+  if (/(llama|mistral|mixtral|qwen|phi\b|deepseek|codellama|vicuna|orca|gemma)/.test(s)) return 'ollama'
+  return ''
+}
+
+// Which reasoning-effort levels a model id supports (empty ⇒ no effort control).
+// OpenAI o-series & GPT-5 take minimal→high; Claude Opus/Sonnet & Gemini 2.5
+// reason at low→high.
+function modelEffortLevels(id) {
+  const s = String(id || '').toLowerCase()
+  if (/(^|[^a-z])o\d/.test(s) || /gpt-5/.test(s)) return ['minimal', 'low', 'medium', 'high']
+  if (/(opus|sonnet)/.test(s)) return ['low', 'medium', 'high']
+  if (/gemini-2\.5/.test(s)) return ['low', 'medium', 'high']
+  return []
+}
+
+// A short capability/tier hint for a model id (shown faint on the right of a row).
+function modelTier(id) {
+  const s = String(id || '').toLowerCase()
+  if (/opus/.test(s)) return 'most capable'
+  if (/sonnet/.test(s)) return 'balanced'
+  if (/haiku/.test(s)) return 'fastest'
+  if (/(^|[^a-z])o\d|gpt-5/.test(s)) return 'reasoning'
+  if (/(mini|flash|lite|small|8b|7b|3b)/.test(s)) return 'fast'
+  if (/(pro|large|405b|70b|72b)/.test(s)) return 'capable'
+  return ''
+}
+
 export class RAGEngine {
   constructor() {
     this.chunks = [] // Array of { id, docId, filePath, header, text, vector }
@@ -57,6 +141,36 @@ export class RAGEngine {
     this.claudeModel = ''
     this.cliCmd = ''
     this.cliPromptFlag = '-p'
+    // Model chosen in the composer picker. `localModel` overrides the auto-picked
+    // Ollama generation model; `cliModel` (+ `cliModelFlag`) selects a model for a
+    // coding-agent CLI. `apiModel`/`claudeModel` above double as the picked model.
+    this.localModel = ''
+    this.cliModel = ''
+    this.cliModelFlag = ''
+    // Reasoning effort for models that accept it (OpenAI o-series/GPT-5, Claude
+    // Opus/Sonnet, Gemini 2.5). Sent as `reasoning_effort` on the api backend and
+    // as `--effort` on Claude Code.
+    this.modelEffort = ''
+    // Exact model ids learned FROM the real agent (alias → 'claude-opus-4-8'),
+    // captured from Claude Code's JSON output so the picker shows true versions.
+    this.claudeResolved = {}
+    // Token usage / cost from the most recent answer (for the usage readout).
+    this.lastUsage = null
+
+    // ── Agent context (set by the active "agent" persona before each ask) ──────
+    // Extra system instructions prepended to the Brain prompt for this persona.
+    this.agentInstructions = ''
+    // Which tool GROUPS this agent may use (Set of 'docs'|'email'|'calendar'|
+    // 'system'); null = all groups. Filters both the advertised catalogue and
+    // dispatch, so a Calendar agent can't be coaxed into sending email.
+    this.enabledToolGroups = null
+    // Write/send autonomy: 'ask' = preview+approve every write, 'auto-reply' =
+    // single sends go straight through but bulk/campaign still asks, 'autonomous'
+    // = never asks. Default is the safe one. A persona can raise it.
+    this.writePolicy = 'ask'
+    // Injected by the UI: async ({kind,summary,detail,bulk}) => boolean. Shows the
+    // approval modal and resolves true to proceed. Absent ⇒ writes fail safe.
+    this.confirmAction = null
 
     // Tools the agent loop can call are data, not a hard-coded switch — built-ins
     // and plugin-provided tools live side by side here so _toolCatalog/runTool
@@ -67,6 +181,7 @@ export class RAGEngine {
     // because a real agent edits files; bounded so the Brain loop can never hang.
     this.STUDIO_BUILD_TIMEOUT_MS = 180000
     this._registerBuiltinTools()
+    this._registerWorkspaceTools()
   }
 
   /**
@@ -86,7 +201,7 @@ export class RAGEngine {
     if (typeof d.handler !== 'function') {
       console.warn('[RAG Engine] registerTool: missing handler for', d.id); return false
     }
-    const MAX_TOOLS = 64
+    const MAX_TOOLS = 256 // generous headroom for MCP servers that expose many tools
     if (!this.toolRegistry.has(d.id) && this.toolRegistry.size >= MAX_TOOLS) {
       console.warn('[RAG Engine] registerTool: tool cap reached, ignoring', d.id); return false
     }
@@ -96,6 +211,8 @@ export class RAGEngine {
       parameters: (d.parameters && typeof d.parameters === 'object') ? d.parameters : {},
       handler: d.handler,
       source: d.source || 'plugin',
+      group: d.group || (d.source === 'builtin' ? 'docs' : 'system'),
+      write: !!d.write,
     })
     return true
   }
@@ -112,6 +229,83 @@ export class RAGEngine {
     return Array.from(this.toolRegistry.values()).map((t) => ({
       id: t.id, description: t.description, parameters: t.parameters, source: t.source,
     }))
+  }
+
+  /**
+   * Pull every connected MCP server's tools (via the main-process pool) and
+   * register them as first-class Brain tools. Each becomes group `mcp:<server>`
+   * so agents can be scoped to specific servers, and its handler dispatches back
+   * over `mcp:call`. Servers flagged askFirst route through the approval modal.
+   * Idempotent: drops previously-registered MCP tools first, so it doubles as the
+   * refresh on a `mcp:changed` event.
+   */
+  async syncMcpTools() {
+    this._mcpSynced = true
+    if (!(typeof window !== 'undefined' && window.api && typeof window.api.invoke === 'function')) return 0
+    let res
+    try { res = await window.api.invoke('mcp:tools') } catch (_e) { return 0 }
+    // Clear stale MCP tools (anything whose source is namespaced under "mcp").
+    for (const [id, t] of Array.from(this.toolRegistry.entries())) {
+      if (t.source && String(t.source).startsWith('mcp')) this.toolRegistry.delete(id)
+    }
+    if (!res || !res.ok || !Array.isArray(res.tools)) return 0
+    const used = new Set(Array.from(this.toolRegistry.keys()))
+    let n = 0
+    for (const t of res.tools) {
+      let id = this._mcpToolId(t.server, t.name)
+      while (used.has(id)) id = `${id}_${n}`.slice(0, 49) // collision after truncation
+      used.add(id)
+      const server = t.server
+      const toolName = t.name
+      const serverName = t.serverName || t.server
+      const askFirst = !!t.askFirst
+      const okReg = this.registerTool({
+        id,
+        description: (t.description || `${toolName} — ${serverName} (MCP)`).slice(0, 400),
+        parameters: this._mcpParams(t.inputSchema),
+        source: `mcp:${server}`,
+        group: `mcp:${server}`,
+        write: askFirst,
+        handler: async (args) => {
+          if (askFirst && typeof this.confirmAction === 'function') {
+            const proceed = await this.confirmAction({
+              kind: 'mcp_call', bulk: false,
+              summary: `Run ${toolName} via ${serverName}`,
+              detail: { server: serverName, tool: toolName, args: args || {} },
+            })
+            if (!proceed) return { error: 'User declined this tool call.' }
+          }
+          let r
+          try { r = await window.api.invoke('mcp:call', { server, tool: toolName, args: args || {} }) } catch (e) { return { error: e.message } }
+          if (!r || !r.ok) return { error: (r && r.error) || 'MCP tool failed.' }
+          return (r.text != null && r.text !== '') ? { result: r.text } : (r.raw || { ok: true })
+        },
+      })
+      if (okReg) n += 1
+    }
+    return n
+  }
+
+  /** Sanitise server+tool into a registry-legal id: ^[a-z][a-z0-9_]{1,48}$. */
+  _mcpToolId(server, name) {
+    const s = (x) => String(x || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
+    let id = `mcp_${s(server)}_${s(name)}`.replace(/_+/g, '_').slice(0, 49)
+    if (!/^[a-z]/.test(id)) id = `m_${id}`.slice(0, 49)
+    return id
+  }
+
+  /** Compact a JSON-Schema inputSchema into the {name:'type?'} hint the catalog renders. */
+  _mcpParams(schema) {
+    try {
+      if (!schema || schema.type !== 'object' || !schema.properties) return {}
+      const req = new Set(Array.isArray(schema.required) ? schema.required : [])
+      const out = {}
+      for (const [k, v] of Object.entries(schema.properties)) {
+        const type = (v && (Array.isArray(v.type) ? v.type[0] : v.type)) || 'string'
+        out[k] = req.has(k) ? String(type) : `${type}?`
+      }
+      return out
+    } catch (_e) { return {} }
   }
 
   /** The four read-only built-ins, wrapping the existing _tool* implementations. */
@@ -136,18 +330,266 @@ export class RAGEngine {
       description: "list a document's section headers (a cheap way to see what it covers).",
       handler: (args) => this._toolGetOutline(args),
     })
+    this.registerTool({
+      id: 'recent_changes', source: 'builtin', parameters: { limit: 'number?', days: 'number?' },
+      description: 'list the most recently MODIFIED notes (newest first, with how long ago). Use this to answer "what changed/what did I work on recently?"; then read_document the top entries to summarize the actual edits.',
+      handler: (args) => this._toolRecentChanges(args),
+    })
     // Phase 6 — the Brain can author + install its own connector plugins. This is
     // the ONLY built-in that writes anything; it scaffolds files to disk but the
     // plugin lands DISABLED, so the user reviews the proposed capabilities before
     // it can ever run (sensitive caps like net:<host> are re-prompted at enable).
     this.registerTool({
-      id: 'build_plugin', source: 'builtin',
+      id: 'build_plugin', source: 'builtin', group: 'system', write: true,
       parameters: {
         name: 'string', description: 'string', capabilities: 'string[]', entry: 'string (index.js source)',
       },
       description: 'scaffold + install a new plugin from a spec {name, description, capabilities[], entry(JS source)}; it installs DISABLED so the user reviews capabilities before enabling.',
       handler: (args) => this._toolBuildPlugin(args),
     })
+  }
+
+  /**
+   * Register the workspace-action tools — email + calendar — that let the Brain
+   * act across the user's real accounts. Read tools (search/list/read) run freely;
+   * WRITE tools (send_email, send_campaign, create_calendar_event) route through
+   * `_gateWrite`, which honours the active agent's writePolicy + the approval modal
+   * so real mail never leaves unattended unless the user chose autonomy. Every
+   * handler is desktop-only (needs the IPC bridge) and NEVER throws — failures come
+   * back as { error } so the agent loop stays alive.
+   */
+  _registerWorkspaceTools() {
+    // ── Email (group 'email') ────────────────────────────────────────────────
+    this.registerTool({
+      id: 'list_email_accounts', source: 'builtin', group: 'email', parameters: {},
+      description: 'list the connected email accounts (id, address, name, unread count). Use the id as accountId for the other email tools.',
+      handler: () => this._toolEmail('email:accountsList', {}, (r) => ({ accounts: r.accounts || [] })),
+    })
+    this.registerTool({
+      id: 'search_email', source: 'builtin', group: 'email',
+      parameters: { query: 'string', accountId: 'string?', folder: 'string?' },
+      description: 'search a mailbox for messages matching free text (subject/sender/snippet). Returns summaries with {accountId, folder, uid, from, subject, date, snippet}. accountId defaults to the first account.',
+      handler: (a) => this._toolEmailSearch(a),
+    })
+    this.registerTool({
+      id: 'list_recent_email', source: 'builtin', group: 'email',
+      parameters: { limit: 'number?', accountId: 'string?', folder: 'string?' },
+      description: 'list the most recent messages (newest first). Omit accountId for a UNIFIED view across every inbox. Returns summaries with {accountId, folder, uid, from, subject, date, snippet, seen}.',
+      handler: (a) => this._toolEmailRecent(a),
+    })
+    this.registerTool({
+      id: 'read_email', source: 'builtin', group: 'email',
+      parameters: { accountId: 'string', folder: 'string', uid: 'number' },
+      description: 'read ONE message in full (plain-text body + attachment names). Pass the accountId, folder and uid from a search/list result.',
+      handler: (a) => this._toolEmailRead(a),
+    })
+    this.registerTool({
+      id: 'send_email', source: 'builtin', group: 'email', write: true,
+      parameters: { to: 'string|string[]', subject: 'string', body: 'string', cc: 'string?', bcc: 'string?', accountId: 'string?', inReplyTo: 'string?' },
+      description: 'send ONE email from the user\'s real account. Subject + body required. Routed through approval unless the agent is autonomous. Use for replies and one-off messages.',
+      handler: (a) => this._toolEmailSend(a),
+    })
+    this.registerTool({
+      id: 'send_campaign', source: 'builtin', group: 'email', write: true,
+      parameters: { messages: '[{to, subject, body}]', accountId: 'string?' },
+      description: 'send a PERSONALISED batch (campaign): an array of {to, subject, body}, one per recipient — compose each body yourself for that person. The user approves the whole list once. Use for outreach/engagement campaigns.',
+      handler: (a) => this._toolEmailCampaign(a),
+    })
+    // ── Calendar (group 'calendar') ──────────────────────────────────────────
+    this.registerTool({
+      id: 'list_calendars', source: 'builtin', group: 'calendar', parameters: {},
+      description: 'list the connected calendars (id, name, color, visible). Use a calendar id when creating events.',
+      handler: () => this._toolCal('calendar:calendars', {}, (r) => ({ calendars: r.calendars || [] })),
+    })
+    this.registerTool({
+      id: 'list_calendar_events', source: 'builtin', group: 'calendar',
+      parameters: { startISO: 'string', endISO: 'string' },
+      description: 'list calendar events in a date range (ISO timestamps). Returns {title, startISO, endISO, allDay, location, calendarId}.',
+      handler: (a) => this._toolCal('calendar:events', { startISO: a.startISO, endISO: a.endISO }, (r) => ({ events: r.events || [] })),
+    })
+    this.registerTool({
+      id: 'create_calendar_event', source: 'builtin', group: 'calendar', write: true,
+      parameters: { title: 'string', startISO: 'string', endISO: 'string?', calendarId: 'string?', location: 'string?', description: 'string?', allDay: 'boolean?' },
+      description: 'create a calendar event. Routed through approval unless the agent is autonomous. calendarId defaults to the first writable calendar.',
+      handler: (a) => this._toolCalCreate(a),
+    })
+  }
+
+  /** True if `group` is allowed under the active agent (null set ⇒ all allowed). */
+  _groupEnabled(group) {
+    if (!this.enabledToolGroups) return true
+    return this.enabledToolGroups.has(group)
+  }
+
+  /** Bridge guard: every workspace tool needs the Electron IPC bridge. */
+  _hasBridge() {
+    return typeof window !== 'undefined' && window.api && typeof window.api.invoke === 'function'
+  }
+
+  /** Generic read-only email IPC call → shaped result (never throws). */
+  async _toolEmail(channel, payload, shape) {
+    if (!this._hasBridge()) return { error: 'Email is only available in the desktop app.' }
+    try {
+      const r = await window.api.invoke(channel, payload || {})
+      if (!r || r.ok === false) return { error: (r && r.error) || `${channel} failed` }
+      return shape ? shape(r) : r
+    } catch (e) { return { error: (e && e.message) || String(e) } }
+  }
+
+  /** Generic read-only calendar IPC call → shaped result (never throws). */
+  async _toolCal(channel, payload, shape) {
+    if (!this._hasBridge()) return { error: 'Calendar is only available in the desktop app.' }
+    try {
+      const r = await window.api.invoke(channel, payload || {})
+      if (!r || r.ok === false) return { error: (r && r.error) || `${channel} failed` }
+      return shape ? shape(r) : r
+    } catch (e) { return { error: (e && e.message) || String(e) } }
+  }
+
+  /** Resolve a usable email accountId: explicit → first connected. */
+  async _resolveEmailAccount(accountId) {
+    if (accountId && accountId !== '*') return accountId
+    const r = await window.api.invoke('email:accountsList', {})
+    const first = r && r.accounts && r.accounts[0]
+    return first ? first.id : null
+  }
+
+  async _toolEmailSearch(a = {}) {
+    if (!this._hasBridge()) return { error: 'Email is only available in the desktop app.' }
+    try {
+      const accountId = await this._resolveEmailAccount(a.accountId)
+      if (!accountId) return { error: 'No email account is connected. Add one in the Inbox first.' }
+      const r = await window.api.invoke('email:search', { accountId, query: String(a.query || ''), folder: a.folder || undefined })
+      if (!r || r.ok === false) return { error: (r && r.error) || 'search failed' }
+      return { accountId, messages: (r.messages || []).slice(0, 25) }
+    } catch (e) { return { error: (e && e.message) || String(e) } }
+  }
+
+  async _toolEmailRecent(a = {}) {
+    if (!this._hasBridge()) return { error: 'Email is only available in the desktop app.' }
+    try {
+      const unified = !a.accountId
+      const accountId = unified ? '*' : a.accountId
+      const folder = a.folder || (unified ? '__ALL_INBOXES__' : 'INBOX')
+      const limit = Math.min(Math.max(Number(a.limit) || 20, 1), 50)
+      const r = await window.api.invoke('email:messages', { accountId, folder, offset: 0, limit })
+      if (!r || r.ok === false) return { error: (r && r.error) || 'list failed' }
+      return { messages: r.messages || [], total: r.total || 0 }
+    } catch (e) { return { error: (e && e.message) || String(e) } }
+  }
+
+  async _toolEmailRead(a = {}) {
+    if (!this._hasBridge()) return { error: 'Email is only available in the desktop app.' }
+    if (!a.accountId || !a.folder || a.uid == null) return { error: 'read_email needs accountId, folder and uid (from a search/list result).' }
+    try {
+      const r = await window.api.invoke('email:message', { accountId: a.accountId, folder: a.folder, uid: Number(a.uid) })
+      if (!r || r.ok === false) return { error: (r && r.error) || 'read failed' }
+      const m = r.message || {}
+      const text = (m.text && m.text.trim())
+        ? m.text
+        : String(m.html || '').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+      return {
+        subject: m.subject, from: m.from, to: m.to, date: m.date,
+        body: text.slice(0, 6000),
+        attachments: (m.attachments || []).map((x) => x.filename).filter(Boolean),
+      }
+    } catch (e) { return { error: (e && e.message) || String(e) } }
+  }
+
+  async _toolEmailSend(a = {}) {
+    if (!this._hasBridge()) return { error: 'Email is only available in the desktop app.' }
+    const to = a.to
+    const subject = String(a.subject || '').trim()
+    const body = String(a.body || '')
+    if (!to || (Array.isArray(to) && !to.length)) return { error: 'send_email needs a "to" recipient.' }
+    if (!subject) return { error: 'send_email needs a "subject".' }
+    try {
+      const accountId = await this._resolveEmailAccount(a.accountId)
+      if (!accountId) return { error: 'No email account is connected.' }
+      const recips = Array.isArray(to) ? to.join(', ') : String(to)
+      const approved = await this._gateWrite({
+        kind: 'send_email', bulk: Array.isArray(to) && to.length > 1,
+        summary: `Send email to ${recips}`,
+        detail: { to, cc: a.cc, bcc: a.bcc, subject, body },
+      })
+      if (!approved) return { cancelled: true, note: 'The user did not approve this send.' }
+      const draft = { to, cc: a.cc || undefined, bcc: a.bcc || undefined, subject, text: body, inReplyTo: a.inReplyTo || undefined }
+      const r = await window.api.invoke('email:send', { accountId, draft })
+      if (!r || r.ok === false) return { error: (r && r.error) || 'send failed' }
+      return { ok: true, sent: true, to, subject, messageId: r.messageId }
+    } catch (e) { return { error: (e && e.message) || String(e) } }
+  }
+
+  async _toolEmailCampaign(a = {}) {
+    if (!this._hasBridge()) return { error: 'Email is only available in the desktop app.' }
+    const msgs = Array.isArray(a.messages) ? a.messages.filter((m) => m && m.to && m.subject) : []
+    if (!msgs.length) return { error: 'send_campaign needs a non-empty "messages" array of {to, subject, body}.' }
+    if (msgs.length > 200) return { error: 'Campaign too large (max 200 recipients per batch).' }
+    try {
+      const accountId = await this._resolveEmailAccount(a.accountId)
+      if (!accountId) return { error: 'No email account is connected.' }
+      const approved = await this._gateWrite({
+        kind: 'send_campaign', bulk: true,
+        summary: `Send a campaign to ${msgs.length} recipient${msgs.length === 1 ? '' : 's'}`,
+        detail: { messages: msgs.map((m) => ({ to: m.to, subject: m.subject, body: m.body || '' })) },
+      })
+      if (!approved) return { cancelled: true, note: 'The user did not approve this campaign.' }
+      const results = []
+      for (const m of msgs) {
+        try {
+          const r = await window.api.invoke('email:send', { accountId, draft: { to: m.to, subject: String(m.subject), text: String(m.body || '') } })
+          results.push({ to: m.to, ok: !!(r && r.ok !== false), error: (r && r.error) || undefined })
+        } catch (e) { results.push({ to: m.to, ok: false, error: (e && e.message) || String(e) }) }
+      }
+      const sent = results.filter((r) => r.ok).length
+      return { ok: true, sent, failed: results.length - sent, results }
+    } catch (e) { return { error: (e && e.message) || String(e) } }
+  }
+
+  async _toolCalCreate(a = {}) {
+    if (!this._hasBridge()) return { error: 'Calendar is only available in the desktop app.' }
+    const title = String(a.title || '').trim()
+    if (!title || !a.startISO) return { error: 'create_calendar_event needs a title and startISO.' }
+    try {
+      let calendarId = a.calendarId
+      if (!calendarId) {
+        const cr = await window.api.invoke('calendar:calendars', {})
+        const cal = cr && cr.calendars && cr.calendars[0]
+        calendarId = cal ? cal.id : null
+      }
+      if (!calendarId) return { error: 'No calendar is connected. Add a calendar account first.' }
+      const approved = await this._gateWrite({
+        kind: 'create_calendar_event', bulk: false,
+        summary: `Create event "${title}"`,
+        detail: { title, startISO: a.startISO, endISO: a.endISO, location: a.location, description: a.description },
+      })
+      if (!approved) return { cancelled: true, note: 'The user did not approve this event.' }
+      const r = await window.api.invoke('calendar:eventCreate', {
+        calendarId, title, startISO: a.startISO, endISO: a.endISO || undefined,
+        allDay: !!a.allDay, location: a.location || undefined, description: a.description || undefined,
+      })
+      if (!r || r.ok === false) return { error: (r && r.error) || 'create failed' }
+      return { ok: true, created: true, event: r.event }
+    } catch (e) { return { error: (e && e.message) || String(e) } }
+  }
+
+  /**
+   * Decide whether a WRITE tool may proceed, honouring the active agent's policy:
+   *   autonomous  → always yes (no prompt)
+   *   auto-reply  → yes for single sends; bulk/campaign still asks
+   *   ask         → always asks
+   * Asking delegates to the injected `confirmAction` (the approval modal). With no
+   * confirmer wired, it fails safe (no send).
+   * @returns {Promise<boolean>}
+   */
+  async _gateWrite({ kind, summary, detail, bulk }) {
+    const policy = this.writePolicy || 'ask'
+    if (policy === 'autonomous') return true
+    if (policy === 'auto-reply' && !bulk) return true
+    if (typeof this.confirmAction === 'function') {
+      try { return !!(await this.confirmAction({ kind, summary, detail, bulk: !!bulk })) } catch (_) { return false }
+    }
+    return false
   }
 
   /**
@@ -306,7 +748,7 @@ export class RAGEngine {
       // 1) Workspace seeded with the LIVE capability catalog (degrades to '' on error).
       let capsMd = ''
       try { capsMd = buildCapabilitiesMarkdown(null) || '' } catch (_e) { capsMd = '' }
-      const goal = `Build a Notionless plugin "${name}" — ${description || 'no description'}. Capabilities: ${capabilities.join(', ') || '(none)'}.`
+      const goal = `Build a Paperus plugin "${name}" — ${description || 'no description'}. Capabilities: ${capabilities.join(', ') || '(none)'}.`
       const ws = await studioClient.createWorkspace({ goal, capabilitiesMarkdown: capsMd })
       if (!ws || !ws.ok || !isPosInt(ws.buildId)) return null
       const { buildId } = ws
@@ -369,7 +811,7 @@ export class RAGEngine {
   _studioBuildInstruction({ name, description, capabilities, entry }) {
     const caps = (capabilities || []).join(', ') || '(none)'
     return [
-      'Build a Notionless plugin and write it into the plugin/ subdirectory ONLY.',
+      'Build a Paperus plugin and write it into the plugin/ subdirectory ONLY.',
       '',
       `Name: ${name}`,
       description ? `Description: ${description}` : null,
@@ -667,12 +1109,17 @@ export class RAGEngine {
           this.searchMode = 'tfidf'
         }
 
-        // Find best LLM model (non-embed, non-mxbai)
-        const llm = models.find(m => !m.toLowerCase().includes('embed') && !m.toLowerCase().includes('mxbai'))
-        if (llm) {
-          this.llmModel = llm
+        // Find best LLM model (non-embed, non-mxbai). A user pick (localModel)
+        // always wins over the auto-detected default.
+        if (this.localModel) {
+          this.llmModel = this.localModel
         } else {
-          this.llmModel = models[0] || 'llama3'
+          const llm = models.find(m => !m.toLowerCase().includes('embed') && !m.toLowerCase().includes('mxbai'))
+          if (llm) {
+            this.llmModel = llm
+          } else {
+            this.llmModel = models[0] || 'llama3'
+          }
         }
 
         console.log(`[RAG Engine] Active LLM Model: ${this.llmModel}, Search Mode: ${this.searchMode}`)
@@ -712,10 +1159,227 @@ export class RAGEngine {
       this.claudeModel = cfg.claudeModel || ''
       this.cliCmd = cfg.cliCmd || ''
       this.cliPromptFlag = cfg.cliPromptFlag || '-p'
+      this.localModel = cfg.localModel || ''
+      this.cliModel = cfg.cliModel || ''
+      this.cliModelFlag = cfg.cliModelFlag || ''
+      this.modelEffort = cfg.effort || ''
+      this.claudeResolved = (cfg.claudeResolved && typeof cfg.claudeResolved === 'object') ? cfg.claudeResolved : {}
       this._provider = cfg.provider || ''
+      // A user-chosen local model wins over the auto-detected one.
+      if (this.localModel) this.llmModel = this.localModel
     } catch (e) {
       this.aiMode = 'local'
     }
+  }
+
+  // ── In-composer model picker ────────────────────────────────────────────────
+
+  /**
+   * The models offered for the *active* backend, agent-aware:
+   *   - local       → models installed in Ollama (live `/api/tags`)
+   *   - api         → the provider's live `/models` list ∪ curated suggestions
+   *   - claude-code → Claude aliases (opus/sonnet/haiku) — rides the Claude sign-in
+   *   - cli         → the agent's known models (Gemini, Cursor, …), if any
+   * Returns { backend, current, models:[{id,label}], allowCustom }. `allowCustom`
+   * means the user may type any model name; the lists are only suggestions.
+   */
+  async listModels() {
+    const m = this.aiMode
+    let info
+    if (m === 'local') {
+      const names = await this._ollamaModelNames().catch(() => [])
+      info = {
+        backend: 'local',
+        current: this.localModel || this.llmModel || '',
+        models: names.map((n) => ({ id: n, label: n })),
+        allowCustom: false,
+        note: names.length ? 'Installed in Ollama on this computer' : 'No Ollama models found',
+      }
+    } else if (m === 'api') {
+      const live = await this._apiModelNames().catch(() => [])
+      const curated = API_MODELS[this._provider] || []
+      const ids = Array.from(new Set([...(live || []), ...curated]))
+      info = {
+        backend: 'api',
+        current: this.apiModel || '',
+        models: ids.map((n) => ({ id: n, label: n })),
+        allowCustom: true,
+        note: `${this.providerName()} · ${(live && live.length) ? `${live.length} live` : 'suggested'}`,
+      }
+    } else if (m === 'claude-code') {
+      info = {
+        backend: 'claude-code',
+        current: this.claudeModel || '',
+        models: CLAUDE_MODELS.slice(),
+        allowCustom: true,
+        note: 'Claude Code',
+      }
+    } else if (m === 'cli') {
+      info = {
+        backend: 'cli',
+        current: this.cliModel || '',
+        models: (CLI_MODELS[this.cliCmd] || []).slice(),
+        allowCustom: true,
+        note: this.cliCmd || 'Coding agent',
+      }
+    } else {
+      info = { backend: m, current: '', models: [], allowCustom: false }
+    }
+    // Decorate every entry with a brand logo, a tier hint, and effort capability,
+    // then attach the current model's effort state for the picker's effort row.
+    info.models = (info.models || []).map((e) => this._enrichModel(e, info.backend))
+    // For Claude Code, replace the generic tier with the EXACT model id once the
+    // real agent has told us (alias → 'claude-opus-4-8'), so versions are true.
+    if (info.backend === 'claude-code') {
+      info.models = info.models.map((mm) => {
+        const exact = this.claudeResolved[mm.id || 'default']
+        return exact ? { ...mm, desc: exact, exact } : mm
+      })
+    }
+    // Effort is wired on the api backend (reasoning_effort) and Claude Code
+    // (--effort). Claude's effort is session-level, so it applies to any model.
+    info.effortApplies = info.backend === 'api' || info.backend === 'claude-code'
+    if (info.backend === 'claude-code') {
+      info.efforts = CLAUDE_EFFORTS.slice()
+    } else {
+      const cur = info.models.find((x) => x.id === info.current)
+      info.efforts = cur ? cur.efforts : modelEffortLevels(info.current)
+    }
+    info.currentEffort = this.modelEffort || ''
+    return info
+  }
+
+  /** Decorate a model entry ({id,label?,desc?}) with service/tier/effort metadata. */
+  _enrichModel(entry, backend) {
+    const id = typeof entry === 'string' ? entry : (entry.id || '')
+    const label = (entry && entry.label) || this._prettyModel(id)
+    const desc = (entry && entry.desc) || modelTier(id)
+    return {
+      id,
+      label,
+      desc,
+      service: modelService(id) || this._backendLogoKind(backend),
+      efforts: modelEffortLevels(id),
+    }
+  }
+
+  /** Default service-logo kind for a backend when a model id reveals no brand. */
+  _backendLogoKind(backend) {
+    if (backend === 'local') return 'ollama'
+    if (backend === 'claude-code') return 'claude'
+    if (backend === 'cli') return this.cliCmd === 'gemini' ? 'gemini' : 'agent'
+    if (backend === 'api') return ({ openai: 'openai', anthropic: 'claude', gemini: 'gemini', openrouter: 'openrouter' })[this._provider] || 'service'
+    return 'service'
+  }
+
+  /** Light cleanup of a raw model id for display (keeps it recognizable). */
+  _prettyModel(id) {
+    if (!id) return 'Default'
+    const s = String(id)
+    return s.includes('/') ? s.split('/').pop() : s
+  }
+
+  providerName() {
+    const p = this._provider
+    const labels = { openai: 'OpenAI', anthropic: 'Anthropic', gemini: 'Google Gemini', openrouter: 'OpenRouter', custom: 'Custom API' }
+    return labels[p] || 'AI service'
+  }
+
+  /** Set the active backend's model and persist it (merges into `brain_ai`). */
+  async setActiveModel(id) {
+    const model = String(id || '').trim()
+    const m = this.aiMode
+    if (m === 'local') { this.localModel = model; if (model) this.llmModel = model; await this._persistConfigPatch({ localModel: model }) }
+    else if (m === 'api') { this.apiModel = model; await this._persistConfigPatch({ model }) }
+    else if (m === 'claude-code') { this.claudeModel = model; await this._persistConfigPatch({ claudeModel: model }) }
+    else if (m === 'cli') {
+      this.cliModel = model
+      this.cliModelFlag = CLI_MODEL_FLAG[this.cliCmd] || '-m'
+      await this._persistConfigPatch({ cliModel: model, cliModelFlag: this.cliModelFlag })
+    }
+  }
+
+  /** Set + persist the reasoning effort ('' clears it). */
+  async setModelEffort(level) {
+    this.modelEffort = String(level || '').trim()
+    await this._persistConfigPatch({ effort: this.modelEffort })
+  }
+
+  /**
+   * Extra request fields for the OpenAI-compatible `api` backend. Adds
+   * `reasoning_effort` when the active model supports it and the user picked a
+   * level — providers that don't reason simply ignore the field.
+   */
+  _apiExtra() {
+    const lv = (this.modelEffort || '').trim()
+    if (this.aiMode !== 'api' || !lv) return {}
+    if (!modelEffortLevels(this.apiModel).includes(lv)) return {}
+    return { reasoning_effort: lv }
+  }
+
+  /** The effort to pass to `claude --effort`, if it's a valid Claude level. */
+  _claudeEffort() {
+    const lv = (this.modelEffort || '').trim()
+    return CLAUDE_EFFORTS.includes(lv) ? lv : ''
+  }
+
+  /**
+   * Record the exact model id + token usage reported by Claude Code's JSON
+   * envelope. Maps the chosen alias → the real id ('opus' → 'claude-opus-4-8')
+   * and persists it so the picker shows true versions, even across restarts.
+   */
+  _recordClaudeResult(res) {
+    if (!res || !res.model) return
+    this.lastUsage = {
+      model: res.model,
+      input: res.usage && res.usage.input,
+      output: res.usage && res.usage.output,
+      costUSD: res.costUSD,
+      contextWindow: res.contextWindow,
+      maxOutputTokens: res.maxOutputTokens,
+    }
+    const alias = this.claudeModel || 'default'
+    if (this.claudeResolved[alias] !== res.model) {
+      this.claudeResolved = { ...this.claudeResolved, [alias]: res.model }
+      this._persistConfigPatch({ claudeResolved: this.claudeResolved })
+    }
+  }
+
+  /** Merge a patch into the saved `brain_ai` settings without disturbing the rest. */
+  async _persistConfigPatch(patch) {
+    try {
+      if (!(window.api && window.api.getSettings && window.api.setSettings)) return
+      const raw = await window.api.getSettings('brain_ai')
+      const cfg = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : {}
+      await window.api.setSettings('brain_ai', JSON.stringify({ ...cfg, ...patch }))
+    } catch (_) { /* best-effort */ }
+  }
+
+  /** Non-embedding models installed in Ollama (for the local picker). */
+  async _ollamaModelNames() {
+    const res = await window.api.invoke('ai:ollama-request', { path: '/api/tags', method: 'GET' })
+    if (!(res && res.ok && res.data && Array.isArray(res.data.models))) return []
+    return res.data.models
+      .map((x) => x.name)
+      .filter((n) => n && !n.toLowerCase().includes('embed') && !n.toLowerCase().includes('mxbai'))
+  }
+
+  /** Best-effort live model list from an OpenAI-compatible `/models` endpoint. */
+  async _apiModelNames() {
+    const endpoint = (this.apiEndpoint || '').trim()
+    if (!endpoint) return []
+    const base = endpoint.replace(/\/chat\/completions.*$/i, '').replace(/\/+$/, '')
+    const key = await this._loadApiKey()
+    const res = await fetch(`${base}/models`, {
+      headers: {
+        ...(key ? { Authorization: `Bearer ${key}` } : {}),
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+    })
+    if (!res.ok) return []
+    const j = await res.json().catch(() => ({}))
+    const arr = j.data || j.models || []
+    return arr.map((x) => x.id || x.name).filter(Boolean)
   }
 
   /** Loads the API key (OS keychain first, settings fallback for web). */
@@ -758,6 +1422,7 @@ export class RAGEngine {
           { role: 'user', content: query },
         ],
         stream: true,
+        ...this._apiExtra(),
       }),
     })
 
@@ -800,8 +1465,10 @@ export class RAGEngine {
     const res = await window.api.invoke('ai:claude-code', {
       prompt,
       model: this.claudeModel || undefined,
+      effort: this._claudeEffort() || undefined,
     })
     if (!res || !res.ok) throw new Error(res?.error || 'Claude Code did not respond.')
+    this._recordClaudeResult(res)
     const text = res.text || ''
     onToken(text)
     if (onComplete) onComplete(text, citations)
@@ -818,11 +1485,18 @@ export class RAGEngine {
       cmd: this.cliCmd,
       promptFlag: this.cliPromptFlag || '-p',
       prompt,
+      ...this._cliModelArgs(),
     })
     if (!res || !res.ok) throw new Error(res?.error || `${this.cliCmd || 'The coding agent'} did not respond.`)
     const text = res.text || ''
     onToken(text)
     if (onComplete) onComplete(text, citations)
+  }
+
+  /** Model args for `ai:cli-run` when the user has picked a CLI model (else none). */
+  _cliModelArgs() {
+    if (!this.cliModel) return {}
+    return { model: this.cliModel, modelFlag: this.cliModelFlag || CLI_MODEL_FLAG[this.cliCmd] || '-m' }
   }
 
   /** Mode-aware, friendly error text shown in the chat when generation fails. */
@@ -1179,7 +1853,7 @@ export class RAGEngine {
    * @param {function} onTokenCallback - Stream callback invoked per word chunk `(textToken)`
    * @param {function} onCompleteCallback - Invoked on end of stream, returning completed text and absolute citations `(fullText, citations)`
    */
-  async askBrain(query, onTokenCallback, onCompleteCallback, history = [], onToolCallback = null) {
+  async askBrain(query, onTokenCallback, onCompleteCallback, history = [], onToolCallback = null, images = []) {
     try {
       // 1. Only short-circuit to a literal file LISTING when the user explicitly
       // wants the inventory ("list/show my files", "what docs do we have",
@@ -1226,6 +1900,7 @@ export class RAGEngine {
         onToken: onTokenCallback,
         onComplete: onCompleteCallback,
         onTool: typeof onToolCallback === 'function' ? onToolCallback : null,
+        images: Array.isArray(images) ? images : [],
       })
     } catch (e) {
       console.error('[RAG Engine] Ask brain failed:', e)
@@ -1245,13 +1920,22 @@ export class RAGEngine {
 
   /** Human-readable tool catalogue injected into the system prompt (registry-driven). */
   _toolCatalog() {
-    return Array.from(this.toolRegistry.values()).map((t) => {
-      const params = (t.parameters && Object.keys(t.parameters).length)
-        ? ` ${JSON.stringify(t.parameters)}`
-        : ''
-      const src = t.source && t.source !== 'builtin' ? ` (via ${t.source})` : ''
-      return `- ${t.id}${params} — ${t.description}${src}`
-    }).join('\n')
+    return Array.from(this.toolRegistry.values())
+      .filter((t) => this._groupEnabled(t.group))
+      .map((t) => {
+        const params = (t.parameters && Object.keys(t.parameters).length)
+          ? ` ${JSON.stringify(t.parameters)}`
+          : ''
+        const src = t.source && t.source !== 'builtin' ? ` (via ${t.source})` : ''
+        return `- ${t.id}${params} — ${t.description}${src}`
+      }).join('\n')
+  }
+
+  /** Tool ids the active agent may actually call (respects enabledToolGroups). */
+  _enabledToolIds() {
+    return Array.from(this.toolRegistry.values())
+      .filter((t) => this._groupEnabled(t.group))
+      .map((t) => t.id)
   }
 
   /** All unique indexed document paths. */
@@ -1344,11 +2028,77 @@ export class RAGEngine {
     }
   }
 
+  /**
+   * Answer "what changed / what did I work on recently?" by ranking the indexed
+   * notes on filesystem modification time (newest first). This is the recency
+   * primitive the Brain was missing: it lists the freshly-touched files + how long
+   * ago, and the agent loop is told (via the tool note) to read_document the top
+   * entries to summarize the ACTUAL edits. Electron-only for real mtimes; without
+   * the fs bridge it degrades to the indexed-doc list with unknown timestamps.
+   * @param {{limit?:number, days?:number}} args
+   * @returns {Promise<object>} { count, asOf, changes:[{name,path,modified,ago}], note }
+   */
+  async _toolRecentChanges(args = {}) {
+    const limit = Math.min(Math.max(parseInt(args.limit, 10) || 10, 1), 50)
+    const days = (args && args.days != null) ? Math.max(parseInt(args.days, 10) || 0, 0) : 0
+    const files = this._docPaths()
+    if (!files.length) return { count: 0, changes: [], note: 'No documents are indexed yet.' }
+    const canStat = (typeof window !== 'undefined' && window.api && typeof window.api.invoke === 'function')
+    const now = Date.now()
+    const rows = []
+    for (const f of files) {
+      let mtimeMs = 0
+      if (canStat) {
+        try {
+          const st = await window.api.invoke('fs:stat', f)
+          mtimeMs = (st && (st.mtimeMs || (st.mtime ? new Date(st.mtime).getTime() : 0))) || 0
+        } catch (_) { mtimeMs = 0 }
+      }
+      rows.push({ path: f, mtimeMs })
+    }
+    // Newest first; files we couldn't stat (mtimeMs 0) sink to the bottom.
+    rows.sort((a, b) => b.mtimeMs - a.mtimeMs)
+    let picked = rows
+    if (days > 0) {
+      const cutoff = now - days * 86400000
+      const within = rows.filter((r) => r.mtimeMs >= cutoff)
+      if (within.length) picked = within // ignore the window if it would hide everything
+    }
+    picked = picked.slice(0, limit)
+    return {
+      count: picked.length,
+      asOf: new Date(now).toISOString(),
+      changes: picked.map((r) => ({
+        name: this._docName(r.path),
+        path: this.getRelativePath(r.path),
+        modified: r.mtimeMs ? new Date(r.mtimeMs).toISOString() : null,
+        ago: r.mtimeMs ? this._humanAgo(now - r.mtimeMs) : 'unknown',
+      })),
+      note: 'These are file modification times. To summarize WHAT changed, call read_document on the top entries.',
+      _cite: picked.map((r) => ({ filePath: r.path, header: '' })),
+    }
+  }
+
+  /** Compact "N units ago" from a millisecond delta (coarsens as it grows). */
+  _humanAgo(ms) {
+    const s = Math.max(Math.floor(ms / 1000), 0)
+    if (s < 60) return 'just now'
+    const m = Math.floor(s / 60); if (m < 60) return `${m} minute${m === 1 ? '' : 's'} ago`
+    const h = Math.floor(m / 60); if (h < 24) return `${h} hour${h === 1 ? '' : 's'} ago`
+    const d = Math.floor(h / 24); if (d < 7) return `${d} day${d === 1 ? '' : 's'} ago`
+    const w = Math.floor(d / 7); if (w < 5) return `${w} week${w === 1 ? '' : 's'} ago`
+    const mo = Math.floor(d / 30); if (mo < 12) return `${mo} month${mo === 1 ? '' : 's'} ago`
+    const y = Math.floor(d / 365); return `${y} year${y === 1 ? '' : 's'} ago`
+  }
+
   /** Dispatch a tool call via the registry. Always resolves (errors are returned, not thrown). */
   async runTool(name, args) {
     const tool = this.toolRegistry.get(name)
     if (!tool) {
-      return { error: `Unknown tool "${name}".`, _available: Array.from(this.toolRegistry.keys()) }
+      return { error: `Unknown tool "${name}".`, _available: this._enabledToolIds() }
+    }
+    if (!this._groupEnabled(tool.group)) {
+      return { error: `Tool "${name}" is not enabled for this agent.`, _available: this._enabledToolIds() }
     }
     try {
       return await tool.handler(args || {})
@@ -1406,7 +2156,7 @@ export class RAGEngine {
           ...(key ? { Authorization: `Bearer ${key}` } : {}),
           'anthropic-dangerous-direct-browser-access': 'true',
         },
-        body: JSON.stringify({ model: this.apiModel || 'gpt-4o-mini', messages, stream: false }),
+        body: JSON.stringify({ model: this.apiModel || 'gpt-4o-mini', messages, stream: false, ...this._apiExtra() }),
       })
       if (!res.ok) {
         const t = await res.text().catch(() => '')
@@ -1416,11 +2166,20 @@ export class RAGEngine {
       return j.choices?.[0]?.message?.content || ''
     }
     if (this.aiMode === 'claude-code') {
+      // Pass the Brain prompt as the REAL session system prompt — not flattened
+      // into the user turn, where Claude Code's own identity overrides it and it
+      // refuses our tool contract as a "prompt injection". The conversation (and
+      // any TOOL_RESULT turns) still ride in the -p prompt.
+      const sys = messages.find((m) => m.role === 'system')
+      const convo = messages.filter((m) => m.role !== 'system')
       const res = await window.api.invoke('ai:claude-code', {
-        prompt: this._flattenMessages(messages),
+        prompt: this._flattenMessages(convo),
+        system: sys ? String(sys.content || '') : undefined,
         model: this.claudeModel || undefined,
+        effort: this._claudeEffort() || undefined,
       })
       if (!res || !res.ok) throw new Error(res?.error || 'Claude Code did not respond.')
+      this._recordClaudeResult(res)
       return res.text || ''
     }
     if (this.aiMode === 'cli') {
@@ -1428,6 +2187,7 @@ export class RAGEngine {
         cmd: this.cliCmd,
         promptFlag: this.cliPromptFlag || '-p',
         prompt: this._flattenMessages(messages),
+        ...this._cliModelArgs(),
       })
       if (!res || !res.ok) throw new Error(res?.error || `${this.cliCmd || 'The coding agent'} did not respond.`)
       return res.text || ''
@@ -1465,7 +2225,7 @@ export class RAGEngine {
           ...(key ? { Authorization: `Bearer ${key}` } : {}),
           'anthropic-dangerous-direct-browser-access': 'true',
         },
-        body: JSON.stringify({ model: this.apiModel || 'gpt-4o-mini', messages, stream: true }),
+        body: JSON.stringify({ model: this.apiModel || 'gpt-4o-mini', messages, stream: true, ...this._apiExtra() }),
       })
       if (!res.ok || !res.body) {
         const t = await res.text().catch(() => '')
@@ -1585,21 +2345,38 @@ export class RAGEngine {
   }
 
   _brainSystemPrompt(grounding) {
-    return `You are "Company Brain", the articulate, highly organized keeper of this user's LOCAL workspace. Everything stays on-device and private.
-
-You answer questions about the user's own documents. You have TOOLS to inspect them when the grounding below is not enough.
+    const persona = (this.agentInstructions && this.agentInstructions.trim())
+      ? `\n=== YOUR ROLE (follow these instructions) ===\n${this.agentInstructions.trim()}\n`
+      : ''
+    // Surface the active write-autonomy so the model knows whether a send needs
+    // approval. The hard gate lives in code; this just keeps its narration honest.
+    const policy = this.writePolicy || 'ask'
+    const policyLine = policy === 'autonomous'
+      ? 'You may send/create without asking — the user granted autonomy. Still be careful and accurate.'
+      : policy === 'auto-reply'
+        ? 'Single email replies and one-off sends go through automatically; campaigns and bulk sends are shown to the user for approval first.'
+        : 'Every send/create is shown to the user for approval before it happens. Compose the full message, then call the tool — the app surfaces it for one click.'
+    return `You are "Company Brain", the articulate, highly organized assistant for this user's LOCAL workspace. Everything stays on-device and private.
+${persona}
+You help with the user's documents AND can act across their connected EMAIL and CALENDAR. You have TOOLS — use them rather than guessing.
 
 To CALL A TOOL, reply with ONLY a single JSON object and nothing else, e.g.:
 {"tool":"read_document","args":{"name":"02-closed-loop-impact-tracking"}}
+
+This app's runtime parses that JSON, EXECUTES the tool for you, and feeds the result back as TOOL_RESULT. Emitting the JSON IS how the action happens — there is no other mechanism and no shell. These are YOUR tools; never say a capability is "unavailable" or "not in this session" — if a tool fits the request, emit the call.
 
 Available tools:
 ${this._toolCatalog()}
 
 How to behave:
 - Resolve pronouns from the conversation + grounding. If the user just saw a list of documents and asks "what do these have in it?", they mean THOSE documents — read or summarize them, do not ask which ones.
-- Prefer answering from the grounding. Call read_document for a document's full contents, or search_documents to look across everything.
-- NEVER say you "couldn't find anything" without first trying search_documents or read_document.
-- When you have enough, reply in clear markdown PROSE (no JSON). Ground every claim in the documents; be specific. If the user is just greeting you, greet them back warmly and offer what you can do.
+- Documents: prefer the grounding; call read_document for full contents, or search_documents across everything. NEVER claim you "couldn't find anything" without first searching.
+- Email: to answer "is there an email about X", call search_email (or list_recent_email for "what's new"), then read_email for a specific message before acting on it. Carry accountId/folder/uid from the search result into read_email.
+- Acting on email: when the user says "if there's an email about X, then do Y", actually do it — search, read, then reply with send_email or take the calendar action. Compose a complete, well-written message; don't ask the user to write it.
+- Campaigns: for "run a campaign" / "email my customers", gather the recipient list (ask where it is if unknown — a note, the user's text), compose a PERSONALISED body per recipient, and call send_campaign with the full {to,subject,body} array. ${policyLine}
+- Calendar: use list_calendar_events to check availability/agenda, create_calendar_event to schedule. Always pass ISO timestamps.
+- Sending/creating: ${policyLine}
+- When you have enough, reply in clear markdown PROSE (no JSON). Be specific and concise. After a send/create, confirm what you did (recipient, subject, time). If a tool returns {cancelled:true}, the user declined — acknowledge and stop, don't retry.
 - Do not add citation links yourself — the app shows exact sources automatically.
 
 === WORKSPACE GROUNDING ===
@@ -1644,8 +2421,11 @@ ${grounding.text}`
    * final answer streams out via onToken so the drawer types live.
    * @param {{query, history, onToken, onComplete, onTool?}} a
    */
-  async _agentAnswer({ query, history, onToken, onComplete, onTool }) {
+  async _agentAnswer({ query, history, onToken, onComplete, onTool, images = [] }) {
     console.log(`[RAG Engine] Agentic answer via backend: ${this.aiMode}`)
+    // First-ask warm-up: make sure any configured MCP servers' tools are registered
+    // before we advertise the catalog (subsequent refreshes come via mcp:changed).
+    if (!this._mcpSynced) { try { await this.syncMcpTools() } catch (_e) { /* MCP optional */ } }
     const grounding = await this._buildGrounding(query, history)
     const messages = [{ role: 'system', content: this._brainSystemPrompt(grounding) }]
 
@@ -1655,7 +2435,15 @@ ${grounding.text}`
       const content = String(h.content || '').slice(0, 1500)
       if (content) messages.push({ role, content })
     }
-    messages.push({ role: 'user', content: query })
+    // Vision: when the user attached images AND the backend is an OpenAI-compatible
+    // API, the question becomes a multi-part content array so the image bytes ride
+    // along. Every other backend (Ollama/Claude-Code/CLI) takes string content only,
+    // so images are dropped there (the drawer already warned the user).
+    const visionParts = (Array.isArray(images) && images.length && this.aiMode === 'api') ? images : null
+    messages.push({
+      role: 'user',
+      content: visionParts ? [{ type: 'text', text: query }, ...visionParts] : query,
+    })
 
     const citations = [...(grounding.citations || [])]
     const toolsUsed = []

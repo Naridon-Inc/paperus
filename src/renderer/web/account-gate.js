@@ -33,13 +33,20 @@ export async function ensureAccount() {
   }
   if (!config || !config.enabled) return; // accounts off → no gate
 
+  // An admin invite link (/?invite=…) lets a specific person join even on a
+  // "closed" instance. Pull it from the URL and hand it to the gate.
+  let invite = null;
+  try {
+    invite = new URLSearchParams(window.location.search).get('invite');
+  } catch (e) { /* no-op */ }
+
   // Already signed in?
   try {
     const me = await getJSON('/api/account/me');
     if (me.ok) return;
   } catch (e) { /* fall through to the gate */ }
 
-  await renderGate(config);
+  await renderGate(config, invite);
 }
 
 const ERRORS = {
@@ -49,9 +56,12 @@ const ERRORS = {
   signup_closed: 'Sign-ups are closed on this instance. Ask an admin to add you.',
   invalid_credentials: 'Email or password is incorrect.',
   accounts_disabled: 'Accounts are not enabled here.',
+  account_disabled: 'This account has been disabled. Contact an admin.',
+  invalid_invite: 'This invite link is invalid or has already been used.',
+  invite_email_mismatch: 'This invite was issued for a different email address.',
 };
 
-function renderGate(config) {
+function renderGate(config, invite) {
   return new Promise((resolve) => {
     const host = (typeof window !== 'undefined' && window.location && window.location.host) || 'this instance';
     // Bootstrap: if there are no users yet, the very first sign-up creates the
@@ -59,6 +69,8 @@ function renderGate(config) {
     const bootstrapping = config.signupAllowed && !config.hasUsers;
     let mode = bootstrapping || config.signupAllowed ? 'signup' : 'login';
     if (!config.signupAllowed) mode = 'login';
+    // An invite always means "create your account" regardless of signup mode.
+    if (invite) mode = 'signup';
 
     const wrap = document.createElement('div');
     wrap.setAttribute('data-nl-account-gate', '');
@@ -98,7 +110,7 @@ function renderGate(config) {
           text-align:center;line-height:1.5;}
       </style>
       <form class="nl-card" autocomplete="on">
-        <div class="nl-brand"><span class="nl-dot"></span> Notionless</div>
+        <div class="nl-brand"><span class="nl-dot"></span> Paperus</div>
         <div class="nl-sub" data-sub></div>
         <label>Email</label>
         <input name="email" type="email" autocomplete="username" required />
@@ -122,13 +134,17 @@ function renderGate(config) {
 
     function paint() {
       const signup = mode === 'signup';
-      subEl.textContent = signup
-        ? (bootstrapping ? `Create the first (admin) account for ${host}.` : `Create your account on ${host}.`)
-        : `Sign in to ${host}.`;
+      let sub;
+      if (signup && invite) sub = `You've been invited to ${host}. Create your account.`;
+      else if (signup && bootstrapping) sub = `Create the first (admin) account for ${host}.`;
+      else if (signup) sub = `Create your account on ${host}.`;
+      else sub = `Sign in to ${host}.`;
+      subEl.textContent = sub;
       goEl.textContent = signup ? 'Create account' : 'Sign in';
       passEl.autocomplete = signup ? 'new-password' : 'current-password';
-      // Only offer the toggle to signup when the instance allows it.
-      if (config.signupAllowed && !bootstrapping) {
+      // Only offer the signup/login toggle when the instance allows open signup
+      // and we're not in a fixed-mode flow (bootstrap or invite).
+      if (config.signupAllowed && !bootstrapping && !invite) {
         altEl.innerHTML = signup
           ? 'Already have an account? <a data-toggle>Sign in</a>'
           : 'Need an account? <a data-toggle>Create one</a>';
@@ -150,13 +166,19 @@ function renderGate(config) {
       goEl.disabled = true;
       errEl.textContent = '';
       const path = mode === 'signup' ? '/api/account/signup' : '/api/account/login';
+      const payload = { email, password };
+      if (mode === 'signup' && invite) payload.invite = invite;
       try {
         const r = await getJSON(path, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify(payload),
         });
         if (r.ok) {
+          // Drop the now-consumed invite token from the address bar.
+          if (invite && window.history && window.history.replaceState) {
+            try { window.history.replaceState({}, '', window.location.pathname); } catch (e) { /* no-op */ }
+          }
           wrap.remove();
           resolve();
           return;

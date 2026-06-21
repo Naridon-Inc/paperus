@@ -214,7 +214,13 @@ export class P2PNetwork {
     const isLocalDev = typeof window !== 'undefined' &&
       (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     const relayUrl = (Config && Config.SIGNALING_URL) || null
-    this.signalingServers = isLocalDev ? [] : (relayUrl ? [relayUrl] : [])
+    // In localhost dev we normally skip the public relay (the local :4444 server
+    // below is enough). But if the team has EXPLICITLY pointed the app at their
+    // own server (server-config.js), honor it even in dev — that's the whole
+    // point of "connect to your team's server", and it makes the in-app flow
+    // testable under `pnpm run dev`. The official default relay stays dev-skipped.
+    const isDefaultRelay = relayUrl === 'wss://oss.naridon.com/signaling'
+    this.signalingServers = (isLocalDev && isDefaultRelay) ? [] : (relayUrl ? [relayUrl] : [])
 
     // Add local signaling if on Electron (port 4444). The mobile companion mocks
     // window.api too, but there is no localhost signaling server on a phone — and

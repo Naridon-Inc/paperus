@@ -73,6 +73,7 @@ export class TabManager {
   async closeTab(index) {
     const closedTab = this.tabs[index]
     this.tabs.splice(index, 1)
+    if (this.onTabClose && closedTab) { try { this.onTabClose(closedTab.path) } catch (_e) { /* noop */ } }
     
     if (this.activeTabIndex > index) {
         this.activeTabIndex--

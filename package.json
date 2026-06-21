@@ -1,17 +1,17 @@
 {
   "name": "Notionless",
-  "productName": "Notionless",
-  "version": "1.0.8",
+  "productName": "Paperus",
+  "version": "1.3.0",
   "description": "Open-source, local-first, zero-account, pure-P2P Notion alternative. End-to-end encrypted Markdown notes that sync peer-to-peer with no cloud lock-in.",
   "license": "AGPL-3.0-only",
   "author": "Naridon Inc.",
-  "homepage": "https://github.com/Naridon-Inc/Notionless",
+  "homepage": "https://github.com/Naridon-Inc/paperus",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Naridon-Inc/Notionless.git"
+    "url": "git+https://github.com/Naridon-Inc/paperus.git"
   },
   "bugs": {
-    "url": "https://github.com/Naridon-Inc/Notionless/issues"
+    "url": "https://github.com/Naridon-Inc/paperus/issues"
   },
   "main": "./out/main/index.js",
   "type": "module",
@@ -39,18 +39,28 @@
   },
   "build": {
     "appId": "com.notionless.app",
-    "productName": "Notionless",
+    "productName": "Paperus",
     "files": [
       "**/*",
       "!apps/**",
       "!dist-mobile/**",
+      "!dist-web/**",
+      "!dist/**",
       "!landing/**",
       "!backend/**",
       "!docs/**",
       "!examples/**",
       "!tests/**",
       "!packages/**",
+      "!.aura/**",
+      "!.gemini/**",
+      "!producthunt/**",
       "!**/*.md"
+    ],
+    "asarUnpack": [
+      "**/node_modules/better-sqlite3/**",
+      "**/node_modules/bindings/**",
+      "**/node_modules/file-uri-to-path/**"
     ],
     "publish": [
       {
@@ -77,13 +87,19 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Notionless",
+      "shortcutName": "Paperus",
       "artifactName": "${productName}-${version}-Setup.${ext}"
     },
     "mac": {
       "target": [
         {
           "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
           "arch": [
             "universal"
           ]
@@ -137,15 +153,23 @@
     "@electron-toolkit/utils": "^4.0.0",
     "@isomorphic-git/lightning-fs": "^4.6.2",
     "@lezer/highlight": "^1.2.3",
+    "@medusajs/icons": "^2.16.0",
+    "@medusajs/ui": "^4.1.16",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@sentry/electron": "^7.7.1",
     "@simplewebauthn/browser": "^13.2.2",
+    "@tanstack/react-virtual": "^3.14.3",
+    "better-sqlite3": "^12.11.1",
     "chokidar": "^4.0.0",
     "crypto-js": "^4.2.0",
     "diff": "^8.0.3",
+    "dompurify": "^3.4.11",
     "electron-settings": "^4.0.4",
     "electron-updater": "^6.7.3",
     "fs-extra": "^11.3.0",
     "html2canvas": "^1.4.1",
+    "ical.js": "^2.2.1",
+    "imapflow": "^1.4.2",
     "isomorphic-git": "^1.38.3",
     "jsonwebtoken": "^9.0.3",
     "jspdf": "^4.1.0",
@@ -153,14 +177,20 @@
     "lib0": "^0.2.117",
     "libsodium-wrappers": "^0.8.2",
     "libsodium-wrappers-sumo": "^0.8.2",
+    "mailparser": "^3.9.11",
     "marked": "^18.0.4",
     "mermaid": "^11.15.0",
     "node-fetch": "^2.7.0",
+    "nodemailer": "^9.0.1",
+    "pdfjs-dist": "^6.0.227",
     "qrcode": "^1.5.4",
     "quill": "^2.0.3",
     "quill-delta": "^5.1.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "showdown": "^2.1.0",
     "simple-peer": "^9.11.1",
+    "tsdav": "^2.2.2",
     "turndown": "^7.2.2",
     "turndown-plugin-gfm": "^1.0.2",
     "uuid": "^13.0.0",
@@ -174,11 +204,17 @@
     "yjs": "^13.6.29"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.4",
+    "@medusajs/ui-preset": "^2.16.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "autoprefixer": "^10.5.0",
     "concurrently": "^9.2.1",
     "electron": "^34.0.0",
     "electron-builder": "^26.7.0",
     "electron-vite": "^2.3.0",
     "playwright": "^1.60.0",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^3.4.19",
     "vite": "^6.0.0",
     "vite-plugin-node-polyfills": "^0.25.0"
   },

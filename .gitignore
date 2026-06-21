@@ -30,12 +30,6 @@ yarn.lock
 # Aura tooling snapshots (local dev tool, not part of the project)
 .aura/
 
-# AI / editor agent tooling — never commit (local config, plans, session locks)
-.claude/
-.cursor/
-**/.claude/
-**/.cursor/
-
 # Logs / editor scratch
 *.log
 .vite/
@@ -57,3 +51,11 @@ dist-mobile/
 
 # Generated landing-site mirror (produced by `pnpm run build:site` from landing/)
 backend/public/
+
+# Local AI-assistant tooling artifacts (not part of the project)
+.gemini/
+.gemini.intent
+GEMINI.md
+producthunt/
+.mcp.json
+.claude/

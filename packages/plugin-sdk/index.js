@@ -1,9 +1,9 @@
 /**
- * @notionless/plugin-sdk — authoring helper for Notionless plugins.
+ * @notionless/plugin-sdk — authoring helper for Paperus plugins.
  *
  * FROZEN CONTRACT v1 (apiVersion "1"). See docs/PLUGIN_API_CONTRACT.md.
  *
- * This module is intentionally tiny. A Notionless plugin is a plain ESM module
+ * This module is intentionally tiny. A Paperus plugin is a plain ESM module
  * whose default export is an object with `activate(ctx)` (and an optional
  * `deactivate()`). The host (`plugin-host.js` + `sandbox-runtime.js`) is what
  * actually drives that object — `definePlugin` exists ONLY so authors get a

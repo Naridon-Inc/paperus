@@ -519,7 +519,7 @@ export function createPluginLab(deps) {
   // lets any agent build AND iteratively refine a plugin against the frozen contract.
   function buildSystemPrompt() {
     return [
-      'You are an expert Notionless plugin author working as an INTERACTIVE coding agent.',
+      'You are an expert Paperus plugin author working as an INTERACTIVE coding agent.',
       'You build and iteratively refine ONE plugin with the user across multiple turns.',
       '',
       'How to respond each turn:',

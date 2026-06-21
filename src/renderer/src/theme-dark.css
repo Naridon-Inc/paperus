@@ -1,0 +1,847 @@
+/* =============================================================================
+   theme-dark.css — Paperus dark mode for the VANILLA app.
+
+   Imported once, AFTER style.css (see main.js). All rules are scoped under
+   `:root[data-theme="dark"]` (set by theme.js), so light mode is byte-for-byte
+   untouched.
+
+   Strategy, in two layers:
+     1. Re-point the core CSS custom properties that style.css already uses
+        (`--bg`, `--text`, `--border`, `--accent`, …). Everything wired to those
+        vars goes dark for free.
+     2. Override the (many) places in style.css that hardcode `white` / `#fff` /
+        light greys / dark text. These are grouped by surface below.
+
+   Palette: cool, deep neutral greys (NOT pure black) + a single cool-blue
+   accent. No pink. Tuned to feel premium and quiet.
+   ========================================================================== */
+
+:root[data-theme="dark"] {
+  /* ---- Dark design tokens (local, reused throughout this file) ---- */
+  --d-bg:        #1a1b1e;  /* app chrome / window background      */
+  --d-bg-2:      #18191c;  /* slightly deeper (footer, wells)     */
+  --d-surface:   #212327;  /* sidebar / raised panels             */
+  --d-surface-2: #26282d;  /* hover wells, inputs                 */
+  --d-surface-3: #2d2f35;  /* active rows, code chrome            */
+  --d-editor:    #1d1e21;  /* note canvas (a touch lighter than chrome) */
+  --d-elevated:  #25272c;  /* popovers / menus / modals           */
+  --d-border:    #303236;  /* hairlines                           */
+  --d-border-2:  #3a3d42;  /* stronger dividers / input borders   */
+
+  --d-text:      #e6e7ea;  /* primary text                        */
+  --d-text-2:    #b6b9c0;  /* secondary text                      */
+  --d-text-3:    #8b8f98;  /* muted / captions                    */
+  --d-text-4:    #6b6f78;  /* faint / placeholders                */
+
+  --d-accent:        #5b8cff; /* cool-blue accent (brighter for dark) */
+  --d-accent-strong: #6e9bff;
+  --d-accent-soft:   rgba(91, 140, 255, 0.16); /* tints / selection */
+  --d-accent-softer: rgba(91, 140, 255, 0.10);
+
+  --d-danger:    #ff6b6b;
+  --d-danger-bg: rgba(255, 107, 107, 0.12);
+  --d-ok:        #4ade80;
+  --d-warn:      #f0b657;
+
+  --d-hover:     rgba(255, 255, 255, 0.06); /* generic hover wash on chrome */
+  --d-hover-2:   rgba(255, 255, 255, 0.09);
+
+  /* ---- Re-point the vars style.css already consumes ---- */
+  --bg:          var(--d-bg);
+  --text:        var(--d-text);
+  --sidebar-bg:  var(--d-surface);
+  --aside-bg:    var(--d-surface);
+  --aside-text:  var(--d-text);
+  --border:      var(--d-border);
+  --accent:      var(--d-accent);
+  --text-muted:  var(--d-text-3);
+  --selection:   var(--d-accent-soft);
+  --editor-bg:   var(--d-editor);
+
+  /* Editor callout fallbacks read by inline callouts */
+  --callout-bg:     rgba(255, 255, 255, 0.05);
+  --callout-accent: #7f8794;
+  --text-secondary: var(--d-text-2);
+
+  color-scheme: dark;
+}
+
+/* Native scrollbars (Electron / WebKit) ------------------------------------ */
+:root[data-theme="dark"] ::-webkit-scrollbar { width: 12px; height: 12px; }
+:root[data-theme="dark"] ::-webkit-scrollbar-track { background: transparent; }
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #3a3d44;
+  border-radius: 7px;
+  border: 3px solid var(--d-bg);
+}
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: #494d56; }
+:root[data-theme="dark"] body { scrollbar-color: #3a3d44 transparent; }
+
+/* =========================================================================
+   App chrome: titlebar, tabs, header, footer
+   ========================================================================= */
+:root[data-theme="dark"] body { background-color: var(--d-bg); color: var(--d-text); }
+
+:root[data-theme="dark"] .tabs-header {
+  background: var(--d-bg-2);
+  border-bottom-color: var(--d-border);
+}
+:root[data-theme="dark"] .tab { color: var(--d-text-3); }
+:root[data-theme="dark"] .tab:hover { background: var(--d-hover); }
+:root[data-theme="dark"] .tab.active {
+  background: var(--d-editor);
+  color: var(--d-text);
+}
+:root[data-theme="dark"] .tab.active::after { background: var(--d-editor); }
+:root[data-theme="dark"] .tab-close:hover { background: rgba(255,255,255,0.12); }
+
+:root[data-theme="dark"] .sidebar-toggle,
+:root[data-theme="dark"] .sidebar-toggle-inner,
+:root[data-theme="dark"] .sidebar-toggle-outer { color: var(--d-text-3); }
+:root[data-theme="dark"] .sidebar-toggle:hover,
+:root[data-theme="dark"] .sidebar-toggle-inner:hover,
+:root[data-theme="dark"] .sidebar-toggle-outer:hover { background: var(--d-hover); color: var(--d-text); }
+
+:root[data-theme="dark"] .app-header {
+  background: var(--d-editor);
+  border-bottom-color: var(--d-border);
+}
+:root[data-theme="dark"] #doc-title { color: var(--d-text); }
+:root[data-theme="dark"] #doc-title:focus { background: var(--d-hover); }
+:root[data-theme="dark"] .visibility-badge { color: var(--d-text-3); }
+:root[data-theme="dark"] .btn-text { color: var(--d-text-2); }
+:root[data-theme="dark"] .btn-text:hover { background: var(--d-hover); }
+:root[data-theme="dark"] .window-control-btn { color: var(--d-text-3); }
+:root[data-theme="dark"] .window-control-btn:hover { background: var(--d-hover); color: var(--d-text); }
+
+:root[data-theme="dark"] footer {
+  background: var(--d-bg-2);
+  border-top-color: var(--d-border);
+  color: var(--d-text-3);
+}
+
+/* =========================================================================
+   Sidebar: file tree, headers, search, footer
+   ========================================================================= */
+:root[data-theme="dark"] aside { border-right-color: var(--d-border); }
+:root[data-theme="dark"] #sidebar,
+:root[data-theme="dark"] .sidebar-content { background: var(--d-surface); }
+
+:root[data-theme="dark"] .tree-header { color: var(--d-text); }
+:root[data-theme="dark"] .tree-header i,
+:root[data-theme="dark"] .tree-icon { color: var(--d-text-3); }
+:root[data-theme="dark"] .icon-btn { color: var(--d-text-3); }
+:root[data-theme="dark"] .icon-btn:hover { color: var(--d-text); background: var(--d-hover); }
+
+:root[data-theme="dark"] .tree-item { color: var(--d-text-2); }
+:root[data-theme="dark"] .tree-item:hover { background: var(--d-hover); }
+:root[data-theme="dark"] .tree-item:hover:not(.active) { background: var(--d-hover); }
+:root[data-theme="dark"] .tree-item.active { background: var(--d-accent); color: #fff; }
+:root[data-theme="dark"] .tree-item.active .tree-icon { color: #fff; }
+
+:root[data-theme="dark"] .sidebar-footer { background: var(--d-bg-2); border-top-color: var(--d-border); }
+:root[data-theme="dark"] .sidebar-footer .icon-btn { color: var(--d-text-3); }
+:root[data-theme="dark"] .sidebar-footer .icon-btn:hover { background: var(--d-hover); color: var(--d-text); }
+
+/* Sidebar search trigger */
+:root[data-theme="dark"] .sidebar-search-trigger,
+:root[data-theme="dark"] .search-trigger {
+  background: var(--d-surface-2);
+  color: var(--d-text-3);
+}
+:root[data-theme="dark"] .sidebar-search-trigger:hover,
+:root[data-theme="dark"] .search-trigger:hover {
+  background: var(--d-surface-3);
+  border-color: var(--d-border-2);
+}
+:root[data-theme="dark"] .sidebar-search-trigger kbd,
+:root[data-theme="dark"] .search-trigger kbd {
+  background: var(--d-surface-3);
+  border-color: var(--d-border-2);
+  color: var(--d-text-3);
+}
+
+/* Sidebar utility buttons / badges */
+:root[data-theme="dark"] .sidebar-util-btn { color: var(--d-text-3); }
+:root[data-theme="dark"] .sidebar-util-btn:hover { background: var(--d-hover); color: var(--d-text); }
+
+/* Search view */
+:root[data-theme="dark"] .search-header { background: var(--d-surface); border-bottom-color: var(--d-border); }
+:root[data-theme="dark"] #search-input { background: var(--d-surface-2); border-color: var(--d-border-2); color: var(--d-text); }
+:root[data-theme="dark"] #search-input:focus { background: var(--d-surface-3); border-color: var(--d-accent); }
+:root[data-theme="dark"] .search-result-item { border-bottom-color: var(--d-border); }
+:root[data-theme="dark"] .search-result-item:hover { background: var(--d-hover); }
+:root[data-theme="dark"] .search-result-item .title { color: var(--d-text); }
+:root[data-theme="dark"] .search-result-item .context { color: var(--d-text-3); }
+
+/* Teams / shared-docs / toggle lists in sidebar */
+:root[data-theme="dark"] .team-header,
+:root[data-theme="dark"] .sidebar-section-header { color: var(--d-text-2); }
+:root[data-theme="dark"] .team-header:hover { background: var(--d-hover); }
+:root[data-theme="dark"] .team-doc-item,
+:root[data-theme="dark"] .shared-doc-item { color: var(--d-text-2); }
+:root[data-theme="dark"] .team-doc-item:hover,
+:root[data-theme="dark"] .shared-doc-item:hover { background: var(--d-hover); color: var(--d-text); }
+:root[data-theme="dark"] .team-doc-item.active,
+:root[data-theme="dark"] .shared-doc-item.active { background: var(--d-accent); color: #fff; }
+:root[data-theme="dark"] .doc-icon,
+:root[data-theme="dark"] .team-doc-icon { color: var(--d-text-3); }
+:root[data-theme="dark"] .empty-message,
+:root[data-theme="dark"] .loading-message { color: var(--d-text-3); }
+
+/* Workspace icon squares (used in sidebar + popover) */
+:root[data-theme="dark"] .workspace-icon,
+:root[data-theme="dark"] .workspace-icon-large,
+:root[data-theme="dark"] .workspace-icon-small { background: var(--d-accent); color: #fff; }
+
+/* ── Sidebar rows the dark agent missed ──────────────────────────────────────
+ * style.css themes the NON-prefixed `.team-*` classes, but the sidebar actually
+ * renders the `sidebar-`-prefixed variants (.sidebar-item, .sidebar-doc-item,
+ * .sidebar-team-*), and the Recent/team rows set their colour INLINE
+ * (color:#333/#555 on .doc-name-label). Inline + un-themed light greys read as
+ * near-invisible dark-on-dark. Override with !important so the names/labels are
+ * legible. Active rows keep white-on-accent. */
+:root[data-theme="dark"] .sidebar-item,
+:root[data-theme="dark"] .sidebar-doc-item,
+:root[data-theme="dark"] .sidebar-team-header,
+:root[data-theme="dark"] .sidebar-team-item { color: var(--d-text-2) !important; }
+:root[data-theme="dark"] .sidebar-item:hover,
+:root[data-theme="dark"] .sidebar-doc-item:hover,
+:root[data-theme="dark"] .sidebar-team-header:hover {
+  background: var(--d-hover);
+  color: var(--d-text) !important;
+}
+:root[data-theme="dark"] .sidebar-item.active,
+:root[data-theme="dark"] .sidebar-doc-item.active { background: var(--d-surface-3); color: var(--d-text) !important; }
+
+/* The row name label (Recent/team/doc rows hardcode color:#333 inline). */
+:root[data-theme="dark"] .doc-name-label { color: var(--d-text) !important; }
+:root[data-theme="dark"] .sidebar-doc-item.active .doc-name-label,
+:root[data-theme="dark"] .sidebar-item.active .doc-name-label { color: var(--d-text) !important; }
+
+/* Leading row icons hardcode inline #333/#999/#ccc — normalize to muted grey. */
+:root[data-theme="dark"] .sidebar-item i,
+:root[data-theme="dark"] .sidebar-doc-item i,
+:root[data-theme="dark"] .sidebar-team-header i { color: var(--d-text-3) !important; }
+:root[data-theme="dark"] .sidebar-item.active i { color: var(--d-text-2) !important; }
+
+/* Sidebar utility buttons hardcode hover color:#37352f (dark-on-dark). */
+:root[data-theme="dark"] .sidebar-utility-btn { color: var(--d-text-3) !important; }
+:root[data-theme="dark"] .sidebar-utility-btn:hover {
+  background: var(--d-hover);
+  color: var(--d-text) !important;
+}
+
+/* Workspace name in the sidebar header / popover (hardcoded #333). */
+:root[data-theme="dark"] .wp-workspace-name { color: var(--d-text) !important; }
+
+/* ── More sidebar dark-mode fixes: class-less inline names + bright dividers ──
+ * The top workspace label and the team / owner / folder rows put their name in a
+ * CLASS-LESS <span style="color:#333"> that the row-level overrides above can't
+ * reach (the override colours the row, the inline span re-darkens the text). And
+ * three dividers hardcode #f0f0f0 / #eaeaea with NO dark override, so they read
+ * as bright hairlines on the dark surface (the "broken lines" around the nav,
+ * the Shared header, and the bottom utility row). Fix text + borders. */
+:root[data-theme="dark"] #workspace-label,
+:root[data-theme="dark"] .sidebar-team-header span { color: var(--d-text) !important; }
+:root[data-theme="dark"] .sidebar-doc-item span:not(.doc-name-label) { color: var(--d-text-2) !important; }
+:root[data-theme="dark"] .sidebar-empty-msg,
+:root[data-theme="dark"] #teamspaces-section div[style*="italic"],
+:root[data-theme="dark"] #shared-section div[style*="italic"] { color: var(--d-text-3) !important; }
+/* Dividers → subtle dark border instead of the bright light-grey hairline. */
+:root[data-theme="dark"] .sidebar-nav-list { border-bottom-color: var(--d-border) !important; }
+:root[data-theme="dark"] #shared-section { border-top-color: var(--d-border) !important; }
+:root[data-theme="dark"] .sidebar-bottom { border-top-color: var(--d-border) !important; background: var(--d-surface); }
+
+/* Collapsible group / root headers read as the dimmest things in the tree:
+ *   • the team row "Naridon" is .ts-group-name, which has NO colour rule at all
+ *     (inherits a light-mode grey → near-invisible on dark);
+ *   • the Private workspace root "Lumen" is .tree-item.section-header, which
+ *     hardcodes inline color:#555 (inline beats the row-level dark override).
+ * Both are PARENTS of bright doc rows, so lift them to the primary text token —
+ * a parent dimmer than its children looks broken. */
+:root[data-theme="dark"] .ts-group-name,
+:root[data-theme="dark"] .ts-group-header { color: var(--d-text) !important; }
+:root[data-theme="dark"] .tree-item.section-header { color: var(--d-text) !important; }
+
+/* =========================================================================
+   Editor canvas + Markdown decorations
+   ========================================================================= */
+:root[data-theme="dark"] .editor-container { background-color: var(--d-editor); }
+:root[data-theme="dark"] #editor .cm-content { color: var(--d-text); caret-color: var(--d-accent-strong); }
+:root[data-theme="dark"] #editor .cm-focused .cm-activeLine { background-color: rgba(255,255,255,0.03); }
+:root[data-theme="dark"] #editor .cm-placeholder { color: var(--d-text-4); }
+:root[data-theme="dark"] #page-title { color: var(--d-text); }
+:root[data-theme="dark"] #page-title::placeholder { color: var(--d-text-4); }
+
+:root[data-theme="dark"] #editor .cm-line .tok-processingInstruction,
+:root[data-theme="dark"] #editor .cm-line .tok-meta { color: #5a5e66 !important; }
+:root[data-theme="dark"] .cm-subtle-mark { color: #5a5e66; }
+
+/* Selection / search-match in the editor */
+:root[data-theme="dark"] #editor .cm-selectionBackground,
+:root[data-theme="dark"] #editor .cm-focused .cm-selectionBackground { background: rgba(91,140,255,0.30) !important; }
+:root[data-theme="dark"] #editor .cm-searchMatch { background: rgba(240,182,87,0.28); }
+:root[data-theme="dark"] #editor .cm-searchMatch.cm-searchMatch-selected { background: rgba(240,182,87,0.45); }
+
+/* Headings, quotes, hr */
+:root[data-theme="dark"] #editor .cm-heading-6 { color: var(--d-text-3); }
+:root[data-theme="dark"] .editor-heading,
+:root[data-theme="dark"] #editor h1, :root[data-theme="dark"] #editor h2, :root[data-theme="dark"] #editor h3 { color: var(--d-text); border-bottom-color: var(--d-border); }
+:root[data-theme="dark"] #editor .cm-blockquote { border-left-color: var(--d-border-2); color: var(--d-text-2); }
+:root[data-theme="dark"] #editor .cm-hr { border-top-color: var(--d-border-2); }
+
+/* Fenced code blocks */
+:root[data-theme="dark"] #editor .cm-codeblock { background-color: #161719 !important; }
+:root[data-theme="dark"] #editor .cm-codeblock-first { color: var(--d-text-3) !important; border-bottom-color: #2a2c30; }
+
+/* Tables (editor) */
+:root[data-theme="dark"] #editor .cm-table th,
+:root[data-theme="dark"] #editor .cm-table td { border-color: var(--d-border-2); }
+:root[data-theme="dark"] #editor .cm-table th { background: var(--d-surface-2); }
+:root[data-theme="dark"] #editor .cm-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+:root[data-theme="dark"] #editor .cm-table code { background: var(--d-surface-3); color: #ff9db0; }
+:root[data-theme="dark"] #editor .cm-table-cell:focus { outline-color: var(--d-accent); background: var(--d-accent-softer); }
+:root[data-theme="dark"] .cm-table-action { border-color: var(--d-border-2); color: var(--d-text-3); }
+:root[data-theme="dark"] .cm-table-action:hover { background: var(--d-surface-2); border-color: var(--d-accent); color: var(--d-accent); }
+
+/* Task checkbox tint */
+:root[data-theme="dark"] #editor .cm-checkbox { accent-color: var(--d-accent); }
+
+/* =========================================================================
+   Editor block features: callouts, embeds, page-links, backlinks, etc.
+   ========================================================================= */
+:root[data-theme="dark"] .cm-callout,
+:root[data-theme="dark"] .callout-block { background: rgba(255,255,255,0.04); color: var(--d-text); }
+:root[data-theme="dark"] .editor-callout { background: var(--callout-bg); color: var(--d-text); }
+
+/* Page link chips / wiki-links / mentions */
+:root[data-theme="dark"] .cm-page-link,
+:root[data-theme="dark"] .page-link-chip {
+  background: var(--d-accent-soft); color: var(--d-accent-strong);
+  border-bottom-color: rgba(91,140,255,0.4);
+}
+:root[data-theme="dark"] .cm-page-link:hover,
+:root[data-theme="dark"] .page-link-chip:hover { background: rgba(91,140,255,0.24); }
+:root[data-theme="dark"] .cm-mention { color: var(--d-accent-strong); }
+
+/* Page embed / transclusion */
+:root[data-theme="dark"] .cm-page-embed,
+:root[data-theme="dark"] .page-link-embed { background: var(--d-surface-2); }
+:root[data-theme="dark"] .cm-page-embed:hover { background: var(--d-surface-3); border-color: var(--d-border-2); }
+:root[data-theme="dark"] .cm-transclusion,
+:root[data-theme="dark"] .transclusion { border-color: var(--d-border); background: rgba(255,255,255,0.02); }
+:root[data-theme="dark"] .cm-transclusion-header { color: var(--d-accent-strong); border-bottom-color: var(--d-border); }
+:root[data-theme="dark"] .cm-transclusion-header:hover { background: var(--d-accent-softer); }
+
+/* Backlinks / linked references */
+:root[data-theme="dark"] .backlinks-panel,
+:root[data-theme="dark"] .backlinks-header { border-top-color: var(--d-border); color: var(--d-text-2); }
+:root[data-theme="dark"] .backlinks-count { background: var(--d-surface-3); color: var(--d-text-2); }
+:root[data-theme="dark"] .backlink-item:hover { background: var(--d-hover); }
+:root[data-theme="dark"] .backlink-title { color: var(--d-text); }
+:root[data-theme="dark"] .backlink-snippet { color: var(--d-text-3); }
+
+/* TOC, bookmarks, media embeds */
+:root[data-theme="dark"] .cm-toc { border-color: var(--d-border); background: rgba(255,255,255,0.025); }
+:root[data-theme="dark"] .cm-toc-heading { color: var(--d-text-3); }
+:root[data-theme="dark"] .cm-bookmark { border-color: var(--d-border); background: rgba(255,255,255,0.03); }
+:root[data-theme="dark"] .cm-bookmark:hover { background: var(--d-accent-softer); border-color: var(--d-accent); }
+:root[data-theme="dark"] .cm-bookmark-title { color: var(--d-text); }
+:root[data-theme="dark"] .cm-bookmark-url { color: var(--d-text-3); }
+:root[data-theme="dark"] .cm-embed { background: rgba(255,255,255,0.04); }
+
+/* Mermaid / math errors / broken image */
+:root[data-theme="dark"] .cm-mermaid { background: rgba(255,255,255,0.03); }
+:root[data-theme="dark"] .cm-broken-image,
+:root[data-theme="dark"] .cm-image-broken { border-color: var(--d-border-2); background: var(--d-surface-2); }
+
+/* Date / reminder chips */
+:root[data-theme="dark"] .cm-date-chip { background: rgba(255,255,255,0.08); border-color: var(--d-border-2); color: var(--d-text); }
+
+/* Toggle (<details>) blocks */
+:root[data-theme="dark"] .cm-toggle-header:hover { background: rgba(255,255,255,0.06); }
+:root[data-theme="dark"] .cm-toggle-body { border-color: var(--d-border); color: var(--d-text); }
+
+/* Columns */
+:root[data-theme="dark"] .cm-column { color: var(--d-text); border-color: var(--d-border); }
+
+/* Page header / cover */
+:root[data-theme="dark"] .page-cover { background: #2a2c31; }
+:root[data-theme="dark"] .page-cover-btn { background: rgba(40,42,47,0.92); color: var(--d-text); }
+:root[data-theme="dark"] .page-title { color: var(--d-text); }
+:root[data-theme="dark"] .page-title::placeholder { color: var(--d-text-4); }
+:root[data-theme="dark"] .page-icon-wrap:hover { background: rgba(255,255,255,0.08); }
+:root[data-theme="dark"] .page-add-btn { color: var(--d-text-3); }
+:root[data-theme="dark"] .page-add-btn:hover { background: rgba(255,255,255,0.06); color: var(--d-text); }
+
+/* =========================================================================
+   Floating UI: selection toolbar, context menus, slash menu, block menu
+   ========================================================================= */
+:root[data-theme="dark"] .selection-toolbar { background: #2c2f35; box-shadow: 0 6px 20px rgba(0,0,0,0.5); }
+:root[data-theme="dark"] .selection-toolbar::after { border-color: #2c2f35 transparent transparent transparent; }
+
+:root[data-theme="dark"] .context-menu,
+:root[data-theme="dark"] .block-menu,
+:root[data-theme="dark"] .slash-menu {
+  background: var(--d-elevated);
+  border-color: var(--d-border-2);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.55);
+}
+:root[data-theme="dark"] .context-menu hr { border-top-color: var(--d-border); }
+:root[data-theme="dark"] .context-menu-item,
+:root[data-theme="dark"] .block-menu-item,
+:root[data-theme="dark"] .slash-menu-item { color: var(--d-text-2); }
+:root[data-theme="dark"] .context-menu-item:hover,
+:root[data-theme="dark"] .block-menu-item:hover,
+:root[data-theme="dark"] .slash-menu-item:hover { background: var(--d-accent-soft); color: var(--d-accent-strong); }
+:root[data-theme="dark"] .context-menu-item i,
+:root[data-theme="dark"] .block-menu-item i,
+:root[data-theme="dark"] .slash-menu-item i { color: var(--d-text-3); }
+:root[data-theme="dark"] .context-menu-item:hover i { color: inherit; }
+:root[data-theme="dark"] .context-menu-item.danger:hover { background: var(--d-danger-bg); color: var(--d-danger); }
+
+:root[data-theme="dark"] .block-handle { background: var(--d-surface-3); color: var(--d-text-4); }
+:root[data-theme="dark"] .block-handle:hover { background: var(--d-surface-3); color: var(--d-text-2); }
+
+/* =========================================================================
+   Modals / dialogs / popovers (modal.css + style.css)
+   ========================================================================= */
+:root[data-theme="dark"] .modal,
+:root[data-theme="dark"] .input-box,
+:root[data-theme="dark"] .new-tab-modal,
+:root[data-theme="dark"] .cmd-palette-modal,
+:root[data-theme="dark"] .export-modal,
+:root[data-theme="dark"] .settings-modal,
+:root[data-theme="dark"] .template-modal,
+:root[data-theme="dark"] .emoji-picker,
+:root[data-theme="dark"] .invite-popover,
+:root[data-theme="dark"] .share-box {
+  background: var(--d-elevated);
+  color: var(--d-text);
+  border-color: var(--d-border-2);
+  box-shadow: 0 14px 44px rgba(0,0,0,0.6);
+}
+:root[data-theme="dark"] .modal-header,
+:root[data-theme="dark"] .new-tab-header,
+:root[data-theme="dark"] .cmd-palette-search,
+:root[data-theme="dark"] .invite-header,
+:root[data-theme="dark"] .share-header { border-bottom-color: var(--d-border); }
+:root[data-theme="dark"] .modal-header .close-btn { color: var(--d-text-3); }
+
+:root[data-theme="dark"] .modal-footer,
+:root[data-theme="dark"] .new-tab-footer,
+:root[data-theme="dark"] .cmd-palette-footer,
+:root[data-theme="dark"] .share-footer { background: var(--d-bg-2); border-top-color: var(--d-border); color: var(--d-text-3); }
+:root[data-theme="dark"] .cmd-palette-footer kbd { background: var(--d-surface-3); color: var(--d-text-2); }
+
+:root[data-theme="dark"] .modal-body .hint,
+:root[data-theme="dark"] .form-group .hint { color: var(--d-text-3); }
+:root[data-theme="dark"] .input-box h3 { color: var(--d-text); }
+
+/* Inputs inside modals / forms */
+:root[data-theme="dark"] .modal input,
+:root[data-theme="dark"] .modal select,
+:root[data-theme="dark"] .modal textarea,
+:root[data-theme="dark"] .form-group input,
+:root[data-theme="dark"] .input-box input,
+:root[data-theme="dark"] .new-tab-header input,
+:root[data-theme="dark"] .cmd-palette-search input,
+:root[data-theme="dark"] #share-input,
+:root[data-theme="dark"] .invite-input-row input {
+  background: var(--d-surface-2);
+  border-color: var(--d-border-2);
+  color: var(--d-text);
+}
+:root[data-theme="dark"] .modal input::placeholder,
+:root[data-theme="dark"] .input-box input::placeholder,
+:root[data-theme="dark"] .cmd-palette-search input::placeholder { color: var(--d-text-4); }
+:root[data-theme="dark"] .form-group input:focus,
+:root[data-theme="dark"] .input-box input:focus,
+:root[data-theme="dark"] #share-input:focus { border-color: var(--d-accent); box-shadow: 0 0 0 2px var(--d-accent-soft); }
+
+/* Command palette / new-tab item rows */
+:root[data-theme="dark"] .cmd-item:hover,
+:root[data-theme="dark"] .new-tab-item:hover { background: var(--d-hover); }
+:root[data-theme="dark"] .cmd-item:hover { border-left-color: var(--d-accent); }
+:root[data-theme="dark"] .cmd-item-title,
+:root[data-theme="dark"] .new-tab-item { color: var(--d-text); }
+:root[data-theme="dark"] .cmd-item-subtitle,
+:root[data-theme="dark"] .cmd-item-icon,
+:root[data-theme="dark"] .new-tab-item i,
+:root[data-theme="dark"] .new-tab-label,
+:root[data-theme="dark"] .cmd-empty { color: var(--d-text-3); }
+:root[data-theme="dark"] .new-tab-header i,
+:root[data-theme="dark"] .cmd-palette-search i { color: var(--d-text-3); }
+
+/* Modal overlays — deepen the scrim a touch for dark */
+:root[data-theme="dark"] .modal-overlay,
+:root[data-theme="dark"] .new-tab-modal-overlay,
+:root[data-theme="dark"] .cmd-palette-overlay,
+:root[data-theme="dark"] .template-overlay { background: rgba(0,0,0,0.6); }
+
+/* Buttons */
+:root[data-theme="dark"] .btn { background: var(--d-surface-2); color: var(--d-text); border-color: var(--d-border-2); box-shadow: none; }
+:root[data-theme="dark"] .btn:hover { background: var(--d-surface-3); border-color: var(--d-border-2); }
+:root[data-theme="dark"] .btn-secondary { background: var(--d-surface-2); border-color: var(--d-border-2); color: var(--d-text); }
+:root[data-theme="dark"] .btn-outline { background: transparent; border-color: var(--d-border-2); color: var(--d-text); }
+:root[data-theme="dark"] .btn-primary { background: var(--d-accent); color: #fff; }
+:root[data-theme="dark"] .btn-primary:hover { background: var(--d-accent-strong); }
+
+/* Share / access / suggestion lists */
+:root[data-theme="dark"] .share-tab { color: var(--d-text-3); }
+:root[data-theme="dark"] .share-tab.active { color: var(--d-text); border-bottom-color: var(--d-text); }
+:root[data-theme="dark"] .access-role { color: var(--d-text-2); }
+:root[data-theme="dark"] .user-name { color: var(--d-text); }
+:root[data-theme="dark"] .user-email,
+:root[data-theme="dark"] .invite-email,
+:root[data-theme="dark"] .suggestion-email { color: var(--d-text-3); }
+:root[data-theme="dark"] .invite-name,
+:root[data-theme="dark"] .suggestion-name { color: var(--d-text); }
+:root[data-theme="dark"] .invite-item:hover,
+:root[data-theme="dark"] .suggestion-item:hover { background: var(--d-hover); }
+:root[data-theme="dark"] .contact-suggestions { background: var(--d-elevated); border-color: var(--d-border-2); }
+:root[data-theme="dark"] .clean-select { background: transparent; color: var(--d-text); }
+:root[data-theme="dark"] .avatar.icon { background: var(--d-surface-3); color: var(--d-text-2); }
+
+/* =========================================================================
+   Workspace popover (account menu — where the theme toggle lives)
+   ========================================================================= */
+:root[data-theme="dark"] .workspace-popover {
+  background: var(--d-elevated);
+  border-color: var(--d-border-2);
+  box-shadow: 0 10px 32px rgba(0,0,0,0.6);
+}
+:root[data-theme="dark"] .wp-header,
+:root[data-theme="dark"] .wp-actions { border-bottom-color: var(--d-border); }
+:root[data-theme="dark"] .wp-workspace-name,
+:root[data-theme="dark"] .wp-title { color: var(--d-text); }
+:root[data-theme="dark"] .wp-current-email,
+:root[data-theme="dark"] .wp-plan-badge,
+:root[data-theme="dark"] .wp-subtitle,
+:root[data-theme="dark"] .wp-section-header,
+:root[data-theme="dark"] .wp-footer-info { color: var(--d-text-3); }
+:root[data-theme="dark"] .wp-menu-item { color: var(--d-text-2); }
+:root[data-theme="dark"] .wp-menu-item:hover,
+:root[data-theme="dark"] .wp-btn:hover { background: var(--d-hover); }
+:root[data-theme="dark"] .wp-menu-item i { color: var(--d-text-3) !important; }
+:root[data-theme="dark"] .wp-menu-item .check { color: var(--d-accent); }
+:root[data-theme="dark"] .wp-divider { background: var(--d-border); }
+/* Theme toggle segmented control (defined in the popover markup) */
+:root[data-theme="dark"] .wp-theme-seg { background: var(--d-surface-2); border-color: var(--d-border-2); }
+:root[data-theme="dark"] .wp-theme-opt { color: var(--d-text-3); }
+:root[data-theme="dark"] .wp-theme-opt:hover { color: var(--d-text); }
+:root[data-theme="dark"] .wp-theme-opt.active { background: var(--d-accent); color: #fff; }
+
+/* =========================================================================
+   More-menu dropdown (header overflow)
+   ========================================================================= */
+:root[data-theme="dark"] .more-menu,
+:root[data-theme="dark"] .header-menu {
+  background: var(--d-elevated);
+  border-color: var(--d-border-2);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.55);
+}
+:root[data-theme="dark"] .more-menu-section,
+:root[data-theme="dark"] .more-menu-divider { border-color: var(--d-border); }
+:root[data-theme="dark"] .more-menu-item { color: var(--d-text-2); }
+:root[data-theme="dark"] .more-menu-item:hover { background: var(--d-hover); }
+:root[data-theme="dark"] .more-menu-item i { color: var(--d-text-3); }
+:root[data-theme="dark"] .more-menu-label,
+:root[data-theme="dark"] .menu-section-label { color: var(--d-text-3); }
+:root[data-theme="dark"] .more-menu-item.danger { color: var(--d-danger); }
+:root[data-theme="dark"] .font-btn { background: var(--d-surface-2); color: var(--d-text-2); border-color: var(--d-border-2); }
+:root[data-theme="dark"] .font-btn.active { background: var(--d-accent-soft); border-color: var(--d-accent); color: var(--d-accent-strong); }
+/* Toggle switches */
+:root[data-theme="dark"] .menu-toggle, :root[data-theme="dark"] .toggle-switch { background: var(--d-surface-3); }
+:root[data-theme="dark"] .menu-toggle.active, :root[data-theme="dark"] .toggle-switch.active { background: var(--d-accent); }
+:root[data-theme="dark"] .info-section { background: var(--d-bg-2); color: var(--d-text-3); }
+
+/* =========================================================================
+   Settings modal
+   ========================================================================= */
+:root[data-theme="dark"] .settings-sidebar { background: var(--d-surface); border-right-color: var(--d-border); }
+:root[data-theme="dark"] .settings-sidebar-header { color: var(--d-text-3); }
+:root[data-theme="dark"] .settings-sidebar-item { color: var(--d-text-2); }
+:root[data-theme="dark"] .settings-sidebar-item:hover { background: var(--d-hover); }
+:root[data-theme="dark"] .settings-sidebar-item.active { background: var(--d-surface-3); color: var(--d-text); }
+:root[data-theme="dark"] .settings-content { background: var(--d-elevated); color: var(--d-text); }
+:root[data-theme="dark"] .color-picker-popover { background: var(--d-elevated); border-color: var(--d-border-2); }
+:root[data-theme="dark"] .color-picker-label { color: var(--d-text-3); }
+:root[data-theme="dark"] .color-item:hover { background: var(--d-hover); }
+
+/* =========================================================================
+   Profile view
+   ========================================================================= */
+:root[data-theme="dark"] .profile-header { background: var(--d-bg-2); border-bottom-color: var(--d-border); }
+:root[data-theme="dark"] .profile-avatar { background: var(--d-surface-3); border-color: var(--d-border-2); color: var(--d-text-2); }
+:root[data-theme="dark"] .profile-name-input { color: var(--d-text); }
+:root[data-theme="dark"] .profile-id-badge { background: rgba(255,255,255,0.06); color: var(--d-text-3); }
+:root[data-theme="dark"] .profile-section-header { color: var(--d-text-3); }
+:root[data-theme="dark"] .profile-card { background: var(--d-surface); border-color: var(--d-border); }
+:root[data-theme="dark"] .profile-card:hover { border-color: var(--d-border-2); }
+:root[data-theme="dark"] .profile-card-icon { background: var(--d-surface-3); color: var(--d-text-2); }
+:root[data-theme="dark"] .profile-card-title { color: var(--d-text); }
+:root[data-theme="dark"] .profile-card-desc { color: var(--d-text-3); }
+
+/* =========================================================================
+   Home / dashboard view (Notion-style cards)
+   ========================================================================= */
+:root[data-theme="dark"] .home-page { background: var(--d-editor); }
+:root[data-theme="dark"] .home-content h1,
+:root[data-theme="dark"] .home-greeting { color: var(--d-text); }
+:root[data-theme="dark"] .home-content p,
+:root[data-theme="dark"] .home-section-header,
+:root[data-theme="dark"] .recent-section h4 { color: var(--d-text-3); }
+:root[data-theme="dark"] .recent-card,
+:root[data-theme="dark"] .home-doc-card,
+:root[data-theme="dark"] .home-learn-card,
+:root[data-theme="dark"] .home-split-section {
+  background: var(--d-surface);
+  border-color: var(--d-border);
+}
+:root[data-theme="dark"] .recent-card:hover { border-color: var(--d-accent); box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+:root[data-theme="dark"] .home-doc-card:hover,
+:root[data-theme="dark"] .home-learn-card:hover { background: var(--d-surface-2); border-color: var(--d-border-2); }
+:root[data-theme="dark"] .recent-card .name,
+:root[data-theme="dark"] .home-doc-title,
+:root[data-theme="dark"] .home-learn-title,
+:root[data-theme="dark"] .home-split-title,
+:root[data-theme="dark"] .home-event-title,
+:root[data-theme="dark"] .home-task-item { color: var(--d-text); }
+:root[data-theme="dark"] .recent-card .path,
+:root[data-theme="dark"] .recent-card i,
+:root[data-theme="dark"] .home-doc-footer,
+:root[data-theme="dark"] .home-learn-meta,
+:root[data-theme="dark"] .home-event-date,
+:root[data-theme="dark"] .home-event-meta,
+:root[data-theme="dark"] .home-task-meta,
+:root[data-theme="dark"] .home-doc-icon,
+:root[data-theme="dark"] .home-new-page { color: var(--d-text-3); }
+:root[data-theme="dark"] .home-learn-thumb { background: var(--d-surface-3); border-color: var(--d-border); }
+:root[data-theme="dark"] .home-split-right { background: var(--d-surface-2); }
+:root[data-theme="dark"] .home-split-desc { color: var(--d-text-3); }
+:root[data-theme="dark"] .home-split-link,
+:root[data-theme="dark"] .home-split-icon { color: var(--d-accent-strong); }
+:root[data-theme="dark"] .home-event,
+:root[data-theme="dark"] .home-task-item { border-color: var(--d-border); }
+:root[data-theme="dark"] .home-task-checkbox { border-color: var(--d-border-2); }
+
+/* No-file / empty states */
+:root[data-theme="dark"] .no-file-selected,
+:root[data-theme="dark"] .empty-state { background: var(--d-editor); color: var(--d-text-3); }
+:root[data-theme="dark"] .empty-state h3 { color: var(--d-text-2); }
+:root[data-theme="dark"] .no-file-selected i { color: var(--d-surface-3); }
+
+/* =========================================================================
+   Database / table block views
+   ========================================================================= */
+:root[data-theme="dark"] .cm-db {
+  border-color: var(--d-border-2);
+  background: var(--d-editor);
+}
+:root[data-theme="dark"] .cm-db-title,
+:root[data-theme="dark"] .cm-db-tab.active,
+:root[data-theme="dark"] .cm-db-cell,
+:root[data-theme="dark"] .cm-db-col-header,
+:root[data-theme="dark"] .cm-db-board-col-header { color: var(--d-text); }
+:root[data-theme="dark"] .cm-db-tab,
+:root[data-theme="dark"] .cm-db-add-view,
+:root[data-theme="dark"] .cm-db-col-type,
+:root[data-theme="dark"] .cm-db-add-col,
+:root[data-theme="dark"] .cm-db-add-row,
+:root[data-theme="dark"] .cm-db-board-control,
+:root[data-theme="dark"] .cm-db-card-label,
+:root[data-theme="dark"] .cm-db-empty,
+:root[data-theme="dark"] .cm-db-add-card { color: var(--d-text-3); }
+:root[data-theme="dark"] .cm-db-tab { border-bottom-color: var(--d-border-2); }
+:root[data-theme="dark"] .cm-db-tab:hover { background: var(--d-surface-2); color: var(--d-text); }
+:root[data-theme="dark"] .cm-db-col-header,
+:root[data-theme="dark"] .cm-db-add-col { background: var(--d-surface-2); }
+:root[data-theme="dark"] .cm-db-cell { border-color: var(--d-border); }
+:root[data-theme="dark"] .cm-db-cell:focus,
+:root[data-theme="dark"] .cm-db-cell.focused { background: var(--d-accent-softer); }
+:root[data-theme="dark"] .cm-db-board-col { background: var(--d-surface); }
+:root[data-theme="dark"] .cm-db-card { background: var(--d-surface-2); border-color: var(--d-border); }
+:root[data-theme="dark"] .cm-db-add-card { border-color: var(--d-border-2); }
+:root[data-theme="dark"] .cm-db-add-card:hover { border-color: var(--d-border-2); color: var(--d-text); }
+
+/* =========================================================================
+   Comments sidebar + popovers
+   ========================================================================= */
+:root[data-theme="dark"] .comments-sidebar { background: var(--d-surface); border-left-color: var(--d-border); }
+:root[data-theme="dark"] .comments-header { background: var(--d-bg-2); border-bottom-color: var(--d-border); }
+:root[data-theme="dark"] .comment-thread { background: var(--d-surface-2); border-color: var(--d-border); }
+:root[data-theme="dark"] .comment-author { color: var(--d-text); }
+:root[data-theme="dark"] .comment-time { color: var(--d-text-3); }
+:root[data-theme="dark"] .comment-content { color: var(--d-text-2); }
+:root[data-theme="dark"] .comment-reply { border-color: var(--d-border-2); color: var(--d-text-2); }
+:root[data-theme="dark"] .comment-input,
+:root[data-theme="dark"] .comment-reply-input {
+  background: var(--d-surface-2); border-color: var(--d-border-2); color: var(--d-text);
+}
+:root[data-theme="dark"] .comment-input:focus,
+:root[data-theme="dark"] .comment-reply-input:focus { border-color: var(--d-accent); }
+:root[data-theme="dark"] .comment-popover { background: var(--d-elevated); border-color: var(--d-border-2); box-shadow: 0 8px 28px rgba(0,0,0,0.55); }
+:root[data-theme="dark"] .comment-popover-author { color: var(--d-text); }
+:root[data-theme="dark"] .comment-quoted { background: var(--d-surface-2); border-color: var(--d-border); color: var(--d-text-3); }
+:root[data-theme="dark"] .comment-action:hover { background: var(--d-hover); }
+:root[data-theme="dark"] .comment-cancel-btn { background: var(--d-surface-3); color: var(--d-text-2); }
+:root[data-theme="dark"] .comment-cancel-btn:hover { background: var(--d-surface-2); }
+:root[data-theme="dark"] .comment-submit-btn { background: var(--d-accent); color: #fff; }
+:root[data-theme="dark"] .comment-submit-btn:hover { background: var(--d-accent-strong); }
+/* CM6 comment highlight in body — keep a warm-amber wash, dark-tuned */
+:root[data-theme="dark"] .cm-comment-highlight { background: rgba(240,182,87,0.18); border-bottom-color: rgba(240,182,87,0.5); }
+
+/* =========================================================================
+   Notification center
+   ========================================================================= */
+:root[data-theme="dark"] .notification-center,
+:root[data-theme="dark"] .notifications-panel { background: var(--d-elevated); border-color: var(--d-border-2); box-shadow: 0 8px 28px rgba(0,0,0,0.55); }
+:root[data-theme="dark"] .notification-header { border-bottom-color: var(--d-border); }
+:root[data-theme="dark"] .notification-item { border-bottom-color: var(--d-border); color: var(--d-text-2); }
+:root[data-theme="dark"] .notification-item:hover { background: var(--d-hover); }
+:root[data-theme="dark"] .notification-item.unread { background: var(--d-accent-softer); }
+:root[data-theme="dark"] .notification-meta { color: var(--d-text-3); }
+
+/* =========================================================================
+   History drawer (history.css)
+   ========================================================================= */
+:root[data-theme="dark"] .history-drawer { background: var(--d-surface); border-left-color: var(--d-border); box-shadow: -5px 0 15px rgba(0,0,0,0.3); }
+:root[data-theme="dark"] .history-header,
+:root[data-theme="dark"] .history-actions { background: var(--d-bg-2); border-color: var(--d-border); }
+:root[data-theme="dark"] .history-item { border-bottom-color: var(--d-border); }
+:root[data-theme="dark"] .history-item:hover { background: var(--d-hover); }
+:root[data-theme="dark"] .history-item.active { background: var(--d-hover); border-left-color: var(--d-accent); }
+:root[data-theme="dark"] .history-item .label { color: var(--d-text); }
+:root[data-theme="dark"] .history-item .time { color: var(--d-text-3); }
+:root[data-theme="dark"] .history-preview { background: var(--d-editor); }
+:root[data-theme="dark"] .history-preview-content { color: var(--d-text); }
+:root[data-theme="dark"] .history-preview-content h2 { color: var(--d-text-2); }
+/* Version diff tints, dark-tuned */
+:root[data-theme="dark"] .diff-added,
+:root[data-theme="dark"] .rendered-diff .rd-added { background: rgba(74,222,128,0.14); color: var(--d-text); }
+:root[data-theme="dark"] .diff-removed,
+:root[data-theme="dark"] .rendered-diff .rd-removed { background: rgba(255,107,107,0.14); color: var(--d-text); }
+:root[data-theme="dark"] .rendered-diff th, :root[data-theme="dark"] .rendered-diff td { border-color: var(--d-border-2); }
+:root[data-theme="dark"] .rendered-diff pre { background: #161719; }
+:root[data-theme="dark"] .rendered-diff code { background: rgba(255,255,255,0.08); }
+
+/* =========================================================================
+   Presence avatars (header)
+   ========================================================================= */
+:root[data-theme="dark"] .presence-avatar { border-color: var(--d-editor); }
+:root[data-theme="dark"] .presence-meta { color: var(--d-text-3); }
+
+/* =========================================================================
+   Toasts
+   ========================================================================= */
+:root[data-theme="dark"] .toast,
+:root[data-theme="dark"] .feature-toast { background: var(--d-elevated); color: var(--d-text); border-color: var(--d-border-2); box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+
+/* =========================================================================
+   Company Brain / AI chat surface
+   ========================================================================= */
+:root[data-theme="dark"] .brain-page,
+:root[data-theme="dark"] .company-brain { background: var(--d-editor); color: var(--d-text); }
+:root[data-theme="dark"] .brain-header,
+:root[data-theme="dark"] .brain-topbar { border-bottom-color: var(--d-border); }
+:root[data-theme="dark"] .brain-logo,
+:root[data-theme="dark"] .brain-title { color: var(--d-text); }
+:root[data-theme="dark"] .brain-status-bar { background: var(--d-surface); border-color: var(--d-border); color: var(--d-text-2); }
+:root[data-theme="dark"] .brain-welcome-icon { background: var(--d-surface-3); color: var(--d-text); }
+:root[data-theme="dark"] .brain-welcome-title { color: var(--d-text); }
+:root[data-theme="dark"] .brain-welcome-text { color: var(--d-text-3); }
+:root[data-theme="dark"] .brain-suggestion { background: var(--d-surface-2); border-color: var(--d-border); color: var(--d-text-2); }
+:root[data-theme="dark"] .brain-suggestion:hover { background: var(--d-surface-3); border-color: var(--d-border-2); }
+:root[data-theme="dark"] .brain-user-avatar { background: var(--d-surface-3); color: var(--d-text-2); }
+:root[data-theme="dark"] .brain-msg-sender { color: var(--d-text-3); }
+:root[data-theme="dark"] .brain-msg-body { color: var(--d-text); }
+:root[data-theme="dark"] .brain-msg-body code { background: var(--d-surface-3); color: #ff9db0; }
+:root[data-theme="dark"] .brain-citations { border-top-color: var(--d-border); }
+:root[data-theme="dark"] .brain-citation-item { background: var(--d-surface); border-color: var(--d-border); color: var(--d-text-2); }
+:root[data-theme="dark"] .brain-citation-item:hover { background: var(--d-surface-2); border-color: var(--d-border-2); color: var(--d-text); }
+:root[data-theme="dark"] .brain-input-wrapper { background: var(--d-editor); border-color: var(--d-border); }
+:root[data-theme="dark"] .brain-input-container { background: var(--d-surface-2); border-color: var(--d-border-2); }
+:root[data-theme="dark"] .brain-input-container:focus-within { border-color: var(--d-accent); box-shadow: 0 0 0 2px var(--d-accent-soft); }
+:root[data-theme="dark"] .brain-input-textarea { background: transparent; color: var(--d-text); }
+:root[data-theme="dark"] .brain-input-textarea::placeholder { color: var(--d-text-4); }
+:root[data-theme="dark"] .brain-send-btn { background: var(--d-accent); color: #fff; }
+:root[data-theme="dark"] .brain-send-btn:hover { background: var(--d-accent-strong); }
+/* Threads panel + menus + composer chips */
+:root[data-theme="dark"] .brain-threads-panel { background: var(--d-elevated); border-color: var(--d-border-2); }
+:root[data-theme="dark"] .brain-threads-head { border-bottom-color: var(--d-border); color: var(--d-text); }
+:root[data-theme="dark"] .brain-thread-group { color: var(--d-text-3); }
+:root[data-theme="dark"] .brain-thread-item:hover { background: var(--d-hover); }
+:root[data-theme="dark"] .brain-thread-item.active { background: var(--d-surface-3); }
+:root[data-theme="dark"] .brain-thread-title { color: var(--d-text-2); }
+:root[data-theme="dark"] .brain-thread-title.active { color: var(--d-text); }
+:root[data-theme="dark"] .brain-ai-chip,
+:root[data-theme="dark"] .brain-model-pill { background: var(--d-surface-2); color: var(--d-text-2); }
+:root[data-theme="dark"] .brain-ai-chip:hover,
+:root[data-theme="dark"] .brain-model-pill:hover { background: var(--d-surface-3); color: var(--d-text); }
+:root[data-theme="dark"] .brain-icon-btn,
+:root[data-theme="dark"] .brain-composer-btn { color: var(--d-text-3); }
+:root[data-theme="dark"] .brain-icon-btn:hover,
+:root[data-theme="dark"] .brain-composer-btn:hover { background: var(--d-hover); color: var(--d-text); }
+:root[data-theme="dark"] .brain-model-menu,
+:root[data-theme="dark"] .model-menu { background: var(--d-elevated); border-color: var(--d-border-2); box-shadow: 0 8px 28px rgba(0,0,0,0.55); }
+:root[data-theme="dark"] .model-menu-item { color: var(--d-text-2); }
+:root[data-theme="dark"] .model-menu-item:hover { background: var(--d-hover); }
+:root[data-theme="dark"] .model-menu-item.selected { color: var(--d-text); }
+:root[data-theme="dark"] .model-menu-separator { background: var(--d-border); }
+:root[data-theme="dark"] .brain-attachment-chip,
+:root[data-theme="dark"] .brain-msg-attach { background: var(--d-surface-2); border-color: var(--d-border); color: var(--d-text-2); }
+/* Brain setup / help cards */
+:root[data-theme="dark"] .brain-setup-card,
+:root[data-theme="dark"] .brain-setup-help-code { background: var(--d-surface); border-color: var(--d-border); }
+:root[data-theme="dark"] .brain-setup-title { color: var(--d-text); }
+:root[data-theme="dark"] .brain-setup-desc { color: var(--d-text-3); }
+:root[data-theme="dark"] .brain-setup-card:hover { background: var(--d-surface-2); border-color: var(--d-border-2); }
+:root[data-theme="dark"] .brain-api-input { background: var(--d-surface-2); border-color: var(--d-border-2); color: var(--d-text); }
+/* Notion-style redesign — empty state · composer card · bubbles (dark mirror) */
+:root[data-theme="dark"] .brain-welcome-logo { background: var(--d-elevated); border-color: var(--d-border-2); color: var(--d-text); box-shadow: 0 6px 22px rgba(0,0,0,0.5); }
+:root[data-theme="dark"] .brain-welcome-title { background: linear-gradient(180deg, #e6e7ea, #6b6f78); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+:root[data-theme="dark"] .brain-welcome-sub { color: var(--d-text-3); }
+:root[data-theme="dark"] .brain-welcome-col-head { color: var(--d-text-3); }
+:root[data-theme="dark"] .brain-welcome-empty { color: var(--d-text-4); }
+:root[data-theme="dark"] .brain-welcome .brain-suggestion,
+:root[data-theme="dark"] .brain-welcome-recent { color: var(--d-text-2); }
+:root[data-theme="dark"] .brain-welcome .brain-suggestion:hover,
+:root[data-theme="dark"] .brain-welcome-recent:hover { background: var(--d-hover); color: var(--d-text); }
+:root[data-theme="dark"] .brain-welcome .brain-suggestion i,
+:root[data-theme="dark"] .brain-welcome-recent i { color: var(--d-text-4); }
+:root[data-theme="dark"] .brain-composer-card { background: var(--d-surface-2); border-color: var(--d-border-2); box-shadow: 0 4px 18px rgba(0,0,0,0.4); }
+:root[data-theme="dark"] .brain-composer-card:focus-within { border-color: var(--d-text-4); box-shadow: 0 6px 22px rgba(0,0,0,0.5); }
+:root[data-theme="dark"] .brain-composer-card textarea { color: var(--d-text); }
+:root[data-theme="dark"] .brain-composer-card textarea::placeholder { color: var(--d-text-4); }
+:root[data-theme="dark"] .brain-input-wrapper .brain-send-btn { background: var(--d-accent) !important; color: #fff; }
+:root[data-theme="dark"] .brain-input-wrapper .brain-send-btn:hover { background: var(--d-accent-strong) !important; }
+:root[data-theme="dark"] .brain-message.msg-user .message-content { background: var(--d-surface-3); }
+:root[data-theme="dark"] .brain-message.msg-user .message-body { color: var(--d-text); }
+/* The Brain page surface is hardcoded #fff on .brain-page-layout and the chat
+   panel is transparent — so the layout must carry the dark background. Assistant
+   body text needs a light color too (the old .brain-msg-body rule never matched
+   the real .message-body class). */
+:root[data-theme="dark"] .brain-page-layout { background: var(--d-editor); }
+:root[data-theme="dark"] .brain-chat-panel { background: transparent; }
+:root[data-theme="dark"] .brain-message .message-body { color: var(--d-text); }
+:root[data-theme="dark"] .brain-message .message-body code { background: var(--d-surface-3); color: var(--d-text); }
+:root[data-theme="dark"] .brain-message .message-body a,
+:root[data-theme="dark"] .brain-message .message-body .brain-md-link { color: var(--d-accent); }
+:root[data-theme="dark"] .brain-welcome .brain-suggestion { background: transparent; border: none; }
+
+/* =========================================================================
+   Misc utility / safety nets — keep raw white surfaces from glaring through.
+   These are broad fallbacks for any popover/menu/dialog this file didn't name
+   explicitly. Editor body + chrome are handled above, so this is for the
+   light "white card on dark" gaps only.
+   ========================================================================= */
+:root[data-theme="dark"] .dropdown,
+:root[data-theme="dark"] .popover,
+:root[data-theme="dark"] .menu,
+:root[data-theme="dark"] .card {
+  background-color: var(--d-elevated);
+  color: var(--d-text);
+  border-color: var(--d-border-2);
+}

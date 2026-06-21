@@ -1,5 +1,5 @@
 /**
- * @notionless/plugin-sdk — TypeScript declarations.
+ * @notionless/plugin-sdk — TypeScript declarations for authoring Paperus plugins.
  *
  * FROZEN CONTRACT v1 (apiVersion "1"). These types are authoritative and mirror
  * §2–§5 of docs/PLUGIN_API_CONTRACT.md. They MUST NOT change without bumping

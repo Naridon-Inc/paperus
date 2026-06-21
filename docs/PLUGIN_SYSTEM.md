@@ -12,9 +12,10 @@
    or the team root key. Untrusted plugins run **sandboxed** with explicitly
    granted capabilities.
 3. **Trivial to author with an AI agent.** A user should be able to describe a
-   plugin in plain English to Claude (Claude Code, the in-app "Plugin Lab", or any
-   agent) and get a working, hot-loadable plugin. The whole API is documented in an
-   LLM-friendly, machine-readable form.
+   plugin in plain English to Claude (Claude Code or any agent), point it at the
+   `@notionless/plugin-sdk` types and the LLM-native docs, and get a working,
+   hot-loadable plugin. The whole API is documented in an LLM-friendly,
+   machine-readable form.
 4. **Stays local-first.** Plugins are plain files. Install from a folder, a file, a
    URL, or an optional registry — no mandatory store, no account.
 
@@ -198,31 +199,31 @@ expressed as plugins, the API is incomplete. This is the acceptance test.
 - **Integrity:** plugins may ship an Ed25519 signature; the host shows
   verified/unverified and warns on capability escalation across updates.
 
-## 9. Developer experience — "build a plugin with Claude"
+## 9. Developer experience — the plugin authoring path
 
-This is a first-class feature, not an afterthought.
+Authoring is a first-class, **SDK + CLI** workflow. There is no in-app authoring
+IDE; the app surfaces installed plugins (enable/disable/reload) and links out to
+the SDK. You write plugins in your own editor against the typed SDK.
 
 1. **`@notionless/plugin-sdk`** (npm, **permissively licensed**, see §11) — TypeScript
-   types + a thin runtime client for the RPC channel. Authors get full
-   autocomplete and a typed `ctx`.
-2. **`npm create notionless-plugin`** — scaffolds a working plugin (a custom block +
-   a slash command + a status item) with build config and a dev manifest.
+   types + `definePlugin()` and a typed `ctx`. Authors get full autocomplete in
+   their own editor (VS Code, etc.). This is the canonical surface to build against.
+2. **`npm create @notionless/plugin`** (the `create-notionless-plugin` scaffolder) —
+   writes a working plugin from a template (word-count, custom-callout, ai-summarize,
+   magic-login, custom-section, blank), each pre-wired to the SDK with a valid
+   `plugin.json`. This is the recommended way to start a new plugin.
 3. **LLM-native docs.** Ship `docs/llms.txt` and an `AGENTS.md` that describe the
    *entire* plugin API in a compact, paste-into-an-agent form, plus the JSON
-   schema for `plugin.json` and the `.d.ts` for `ctx`. An agent reads these and
-   writes a correct plugin in one shot.
-4. **In-app "Plugin Lab"** (a dev panel):
-   - Point it at a plugin folder → **hot-reload** on save, live logs, error overlay.
-   - **"Generate with Claude"**: type a description → the Lab calls the *existing*
-     AI backend (`ai:claude-code` / BYO-key / Ollama) with the plugin guide as
-     context → writes a scaffolded plugin into a local folder → hot-loads it
-     sandboxed → you try it immediately. This closes the loop the user asked for:
-     *describe → Claude builds → sandboxed load → use.*
-   - A "capabilities used vs. declared" linter so generated plugins request
-     least-privilege.
+   schema for `plugin.json` and the `.d.ts` for `ctx`. Point any agent (Claude
+   Code, etc.) at these plus the SDK and it writes a correct plugin in one shot.
+4. **In-app "Plugins…" panel** (account menu ▸ Developer ▸ Plugins…): the
+   management surface — lists installed plugins, toggles enable/disable, reloads a
+   plugin from disk, opens the plugins folder, and links to the SDK quickstart. It
+   is **not** an authoring IDE: you scaffold with the CLI and edit in your own
+   editor, then drop the folder into the plugins dir and reload it here.
 5. **Example plugins** in `examples/plugins/` (word-count, a custom callout, an "AI
    summarize selection" command, a CSV→table importer) double as templates and
-   integration tests.
+   integration tests, and mirror the `create-notionless-plugin` templates.
 
 ## 10. Roadmap (phased)
 
@@ -233,8 +234,9 @@ This is a first-class feature, not an afterthought.
 - **Phase 2 — UI & integration surfaces.** `ui.panel`/`toolbarItem`/`statusItem`,
   `ctx.events`, `ctx.ai` provider registration, import/export formats, per-plugin
   `storage`.
-- **Phase 3 — DX & AI authoring.** `create-notionless-plugin`, `llms.txt`/`AGENTS.md`,
-  the in-app Plugin Lab with hot-reload and "Generate with Claude".
+- **Phase 3 — DX & AI authoring.** `@notionless/plugin-sdk`, the
+  `create-notionless-plugin` scaffolder, `llms.txt`/`AGENTS.md`, and the in-app
+  "Plugins…" panel (install/enable/disable/reload + SDK quickstart link).
 - **Phase 4 — Trust & ecosystem.** Signature verification, the static registry,
   capability-diff on update, optional `fs:*`/`net:*` with stricter prompts.
 

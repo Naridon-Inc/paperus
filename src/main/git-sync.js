@@ -13,7 +13,7 @@ import http from 'isomorphic-git/http/node'
 import fs from 'fs-extra'
 import path from 'path'
 
-const DEFAULT_AUTHOR = { name: 'Notionless', email: 'notes@notionless.local' }
+const DEFAULT_AUTHOR = { name: 'Paperus', email: 'notes@notionless.local' }
 
 function onAuth(token) {
   // GitHub/GitLab accept a token as the HTTP basic username.

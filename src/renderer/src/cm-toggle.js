@@ -17,6 +17,7 @@
  * re-render (which only happens when the doc text actually changes).
  */
 import { WidgetType } from '@codemirror/view'
+import { renderInline } from './cm-inline-render'
 
 // Whole `<details>…</details>` block (case-insensitive, spans multiple lines).
 export const DETAILS_RE = /^<details>[\s\S]*?<\/details>\s*$/i
@@ -68,7 +69,7 @@ export class ToggleWidget extends WidgetType {
 
     const summary = document.createElement('span')
     summary.className = 'cm-toggle-summary'
-    summary.textContent = this.parsed.summary
+    summary.innerHTML = renderInline(this.parsed.summary)
 
     header.appendChild(tri)
     header.appendChild(summary)
@@ -80,8 +81,8 @@ export class ToggleWidget extends WidgetType {
       for (const line of this.parsed.body.split('\n')) {
         const p = document.createElement('div')
         p.className = 'cm-toggle-line'
-        p.textContent = line
         if (line.trim() === '') p.innerHTML = '&nbsp;'
+        else p.innerHTML = renderInline(line)
         body.appendChild(p)
       }
     }

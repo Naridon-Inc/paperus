@@ -1029,7 +1029,7 @@ async loadSession() {
       if (!(await this.canUseBiometrics())) throw new Error('Touch ID not available');
 
       // Prompt Touch ID
-      const ok = await this.promptBiometrics('Unlock your Notionless vault');
+      const ok = await this.promptBiometrics('Unlock your Paperus vault');
       if (!ok) throw new Error('Touch ID authentication cancelled');
 
       // Load KEK from safeStorage

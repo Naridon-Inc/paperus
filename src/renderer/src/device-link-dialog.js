@@ -135,7 +135,7 @@ export function openDeviceLinkDialog(manager, teamId) {
 
   const { box, close } = modal(`
     <h3>Link a device to “${esc(teamName)}”</h3>
-    <p class="td-sub">Pair your phone to this team. Open Notionless on your phone, tap <b>Link a device</b>, then scan or paste the link below.</p>
+    <p class="td-sub">Pair your phone to this team. Open Paperus on your phone, tap <b>Link a device</b>, then scan or paste the link below.</p>
     <div id="dl-body">
       <div class="td-status" style="margin-top:0;background:transparent;border:none;padding:0;color:#888;">
         <span class="td-spinner" style="border-color:#cfd8e3;border-top-color:transparent;"></span>Generating a pairing link…
@@ -179,7 +179,7 @@ export function openDeviceLinkDialog(manager, teamId) {
       </div>` : ''}
       ${expLabel ? `<div class="dl-expiry">${esc(expLabel)} — generate a new one if it lapses.</div>` : ''}
       <ol class="dl-steps">
-        <li><span class="dl-num">1</span><span>Install Notionless on your phone and open it.</span></li>
+        <li><span class="dl-num">1</span><span>Install Paperus on your phone and open it.</span></li>
         <li><span class="dl-num">2</span><span>Scan the QR with the phone's camera, or paste the link on its Link screen.</span></li>
         <li><span class="dl-num">3</span><span>Pick a username + password on the phone to claim its own identity in this team.</span></li>
       </ol>

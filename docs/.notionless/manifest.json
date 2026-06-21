@@ -1,0 +1,1004 @@
+{
+  "version": "1.0",
+  "deviceId": "4f2bba17-a904-4d6c-9538-32d70623e86d",
+  "documents": {
+    "3b273b5a-209b-4be8-a8e3-d1d2fc714dd0": {
+      "id": "3b273b5a-209b-4be8-a8e3-d1d2fc714dd0",
+      "path": "PROMPT_QUALITY_AND_COST_OPTIMIZATION.md",
+      "lastModified": 1771185040503,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "c129c27b-c7c4-4c17-ba0e-b877813f719a": {
+      "id": "c129c27b-c7c4-4c17-ba0e-b877813f719a",
+      "path": "comparison/ARCHITECTURE.md",
+      "lastModified": 1771185048769,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "83cb2199-884a-4345-bd10-e56f78b9caab": {
+      "id": "83cb2199-884a-4345-bd10-e56f78b9caab",
+      "path": "PNPM_MIGRATION_TRACKER.md",
+      "lastModified": 1771185051128,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "478c7d2a-2f41-488f-bcee-d14469cbbb46": {
+      "id": "478c7d2a-2f41-488f-bcee-d14469cbbb46",
+      "path": "MARKDOWN_CONTRACT.md",
+      "lastModified": 1771185052541,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "9783bc80-005f-4697-a53b-ed835d84f587": {
+      "id": "9783bc80-005f-4697-a53b-ed835d84f587",
+      "path": "DEBUG_CHART_ISSUE.md",
+      "lastModified": 1771185053005,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "71fe69e4-d6b0-4774-9d38-26dad0fcc9ed": {
+      "id": "71fe69e4-d6b0-4774-9d38-26dad0fcc9ed",
+      "path": "verification-guide.md",
+      "lastModified": 1771185055013,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "9c44e1a9-8060-4787-9b52-1acc318fff38": {
+      "id": "9c44e1a9-8060-4787-9b52-1acc318fff38",
+      "path": "Shared/Mo/Monorepo Architecture & Multi-Platform Strategy.md",
+      "lastModified": 1771186054580,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "a39da4a3-4c98-4e4a-898c-c3e3688ff939": {
+      "id": "a39da4a3-4c98-4e4a-898c-c3e3688ff939",
+      "path": "Shared/Mo/Monorepo.md",
+      "lastModified": 1771188399134,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "991ecf33-539e-4403-a232-8e627b6a64be": {
+      "id": "991ecf33-539e-4403-a232-8e627b6a64be",
+      "path": "Shared/Mo/PROMPT QUALITY AND COST OPTIMIZATION.md",
+      "lastModified": 1771265365074,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "2a303744-4229-4f38-8a00-c6955e0b691b": {
+      "id": "2a303744-4229-4f38-8a00-c6955e0b691b",
+      "path": "Shared/Mo/Untitled.md",
+      "lastModified": 1771265365075,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "083cb59d-b6cf-468e-ab85-ccb190e22581": {
+      "id": "083cb59d-b6cf-468e-ab85-ccb190e22581",
+      "path": "Shared/Mo/BACKEND COMPARISON SUMMARY.md",
+      "lastModified": 1771265365076,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "c7658fe6-4b7d-4088-9809-95d0c4620410": {
+      "id": "c7658fe6-4b7d-4088-9809-95d0c4620410",
+      "path": "Shared/Mo/BACKEND COMPARISON AND MIGRATION PLAN.md",
+      "lastModified": 1771265365076,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "454656c3-5548-4dfa-a1e5-e7b67595adeb": {
+      "id": "454656c3-5548-4dfa-a1e5-e7b67595adeb",
+      "path": "Shared/Mo/OPTIMIZATION MIGRATION PLAN.md",
+      "lastModified": 1771265365077,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "79d15a14-31e2-4a7a-9614-6dc3a7a1409f": {
+      "id": "79d15a14-31e2-4a7a-9614-6dc3a7a1409f",
+      "path": "Shared/Mo/🧠 Prompt Quality & Cost Optimization.md",
+      "lastModified": 1771265365079,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "2c5b75f5-b4ea-4969-8424-ee022756208a": {
+      "id": "2c5b75f5-b4ea-4969-8424-ee022756208a",
+      "path": "Shared/Mo/FRONTEND INTEGRATION SUMMARY.md",
+      "lastModified": 1771265365079,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "6a5aba24-fe19-4d38-bf7a-d3aa0d3a821c": {
+      "id": "6a5aba24-fe19-4d38-bf7a-d3aa0d3a821c",
+      "path": "Shared/Mo/ARCHITECTURE.md",
+      "lastModified": 1771265365080,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "23ea9252-8807-4891-9945-6df6670a034b": {
+      "id": "23ea9252-8807-4891-9945-6df6670a034b",
+      "path": "Shared/Mo/DATABASE COMPARISON SUMMARY.md",
+      "lastModified": 1771265365081,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "8079f05d-ec88-4ed7-91c6-c99fb422ae95": {
+      "id": "8079f05d-ec88-4ed7-91c6-c99fb422ae95",
+      "path": "Shared/Mo/02 BACKEND EVOLUTION.md",
+      "lastModified": 1771265365081,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "f484ff0e-278a-42d7-9f43-f775f2f991c8": {
+      "id": "f484ff0e-278a-42d7-9f43-f775f2f991c8",
+      "path": "Shared/Mo/ARCHITECTURE MIGRATION PLAN.md",
+      "lastModified": 1771265365082,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "fb70061b-60df-4a49-a269-e4414104691e": {
+      "id": "fb70061b-60df-4a49-a269-e4414104691e",
+      "path": "Shared/Mo/AI EXECUTION TRACKING.md",
+      "lastModified": 1771265365084,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "3a6a6627-68e5-4807-9c20-cbb1c8d91b15": {
+      "id": "3a6a6627-68e5-4807-9c20-cbb1c8d91b15",
+      "path": "Shared/Mo/ARCHITECTURE COMPARISON.md",
+      "lastModified": 1771265365084,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "9842e5ab-116d-4e77-8bc9-8fe6cf547e88": {
+      "id": "9842e5ab-116d-4e77-8bc9-8fe6cf547e88",
+      "path": "Shared/Mo/API MIGRATION CHECKLIST.md",
+      "lastModified": 1771265365085,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "3b355cac-4d1b-4d66-9759-515197526503": {
+      "id": "3b355cac-4d1b-4d66-9759-515197526503",
+      "path": "Shared/Mo/API IMPLEMENTATION PLAN.md",
+      "lastModified": 1771265365085,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "f8253749-a185-43fa-807e-30d2dae52e76": {
+      "id": "f8253749-a185-43fa-807e-30d2dae52e76",
+      "path": "Shared/Mo/Auth & Architecture Remediation Plan.md",
+      "lastModified": 1771265365086,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "34aa9808-f639-4c15-9d3c-e0c709e229c5": {
+      "id": "34aa9808-f639-4c15-9d3c-e0c709e229c5",
+      "path": "Shared/Mo/How to Install App Through Shopify Partners.md",
+      "lastModified": 1771265365086,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "ba650e52-ab63-4d21-a375-c0deb4bed900": {
+      "id": "ba650e52-ab63-4d21-a375-c0deb4bed900",
+      "path": "Shared/Mo/Sales Team Guide_ Selling & Onboarding Naridon.md",
+      "lastModified": 1771265365087,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "1d099fc4-d455-4333-a55c-308ea8fe9de5": {
+      "id": "1d099fc4-d455-4333-a55c-308ea8fe9de5",
+      "path": "Shared/Mo/Master Migration Plan_ Monolith to Clean Architecture.md",
+      "lastModified": 1771265365087,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "a2840298-e969-4f6c-a3df-51ec8d1e5910": {
+      "id": "a2840298-e969-4f6c-a3df-51ec8d1e5910",
+      "path": "Shared/Mo/Onboarding Guide_ Shopify Custom App.md",
+      "lastModified": 1771265365102,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "1be3fc23-464e-47e4-94c4-ae0cf2a4e891": {
+      "id": "1be3fc23-464e-47e4-94c4-ae0cf2a4e891",
+      "path": "Shared/Mo/New page.md",
+      "lastModified": 1771265365107,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "2a07511d-76da-47e8-80a4-299ff15103de": {
+      "id": "2a07511d-76da-47e8-80a4-299ff15103de",
+      "path": "Shared/Mo/Untitled  1.md",
+      "lastModified": 1771265365107,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "06a81555-0e2e-417a-bc53-3547a9cb0578": {
+      "id": "06a81555-0e2e-417a-bc53-3547a9cb0578",
+      "path": "Shared/Mo/standalone-web.md",
+      "lastModified": 1771265365108,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "sim-direct-1770899194469": {
+      "id": "sim-direct-1770899194469",
+      "path": "Shared/Mo/Simulated Direct Doc.md",
+      "lastModified": 1771265365109,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "dca53051-8cb3-466d-813e-3c9f6b8ffe18": {
+      "id": "dca53051-8cb3-466d-813e-3c9f6b8ffe18",
+      "path": "Shared/Mo/DEBUG SENTIMENT ISSUE.md",
+      "lastModified": 1771265365110,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "c8a7ec29-99a7-43cc-bb9f-7f393c41fe12": {
+      "id": "c8a7ec29-99a7-43cc-bb9f-7f393c41fe12",
+      "path": "Shared/Mo/Untitled 1.md",
+      "lastModified": 1771265365112,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "48051746-b408-478f-ac54-d0c60f04c098": {
+      "id": "48051746-b408-478f-ac54-d0c60f04c098",
+      "path": "Shared/Mo/01 PHASE 1 PREPARATION.md",
+      "lastModified": 1771265365112,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "254c2cf1-1ad2-4ae7-ba3e-f58b9b275ccd": {
+      "id": "254c2cf1-1ad2-4ae7-ba3e-f58b9b275ccd",
+      "path": "Shared/Mo/AWS DEPLOYMENT JOURNAL.md",
+      "lastModified": 1771265365115,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "83312e60-e3e9-41e8-a063-903360eebe91": {
+      "id": "83312e60-e3e9-41e8-a063-903360eebe91",
+      "path": "Shared/Mo/BACKEND HARDENING TRACKER.md",
+      "lastModified": 1771265365115,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "65b4fe2a-a4a8-40ed-ab15-9cce5c2b1bff": {
+      "id": "65b4fe2a-a4a8-40ed-ab15-9cce5c2b1bff",
+      "path": "Shared/Mo/Untitle.md",
+      "lastModified": 1771265365116,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "f4b3d358-52ca-40de-965a-821e2cfb0ede": {
+      "id": "f4b3d358-52ca-40de-965a-821e2cfb0ede",
+      "path": "Shared/Mo/BUILD PROCESS.md",
+      "lastModified": 1771265365116,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "1b6d5dd6-3a8a-40ae-9729-82da988aa98c": {
+      "id": "1b6d5dd6-3a8a-40ae-9729-82da988aa98c",
+      "path": "Shared/Mo/sales-team-guide.md",
+      "lastModified": 1771265365124,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "5035dc55-d480-4859-8473-ef454ead7a0c": {
+      "id": "5035dc55-d480-4859-8473-ef454ead7a0c",
+      "path": "Shared/Mo/PROCESS COST ANALYSIS.md",
+      "lastModified": 1771265365126,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "72504f17-5bb7-40c6-9914-59a49c44fc48": {
+      "id": "72504f17-5bb7-40c6-9914-59a49c44fc48",
+      "path": "Shared/Mo/STANDALONE ARCHITECTURE.md",
+      "lastModified": 1771265365126,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "1fa2108c-e31b-4954-a4bb-5b7d4dd650b7": {
+      "id": "1fa2108c-e31b-4954-a4bb-5b7d4dd650b7",
+      "path": "Shared/Mo/02 PHASE 2 DOMAIN ARCHITECTURE.md",
+      "lastModified": 1771265365127,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "15c1ffd2-7ccc-4acf-b9a3-dda18c458e68": {
+      "id": "15c1ffd2-7ccc-4acf-b9a3-dda18c458e68",
+      "path": "Shared/Mo/ARCHITECTURE DIAGRAM.md",
+      "lastModified": 1771265365132,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "071c2b06-6765-4079-9911-6f64f6c753cd": {
+      "id": "071c2b06-6765-4079-9911-6f64f6c753cd",
+      "path": "Shared/Mo/BACKEND OPTIMIZATION TRACKER.md",
+      "lastModified": 1771265365134,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "7bb3effd-d8d3-43f6-a8b9-559ec7056283": {
+      "id": "7bb3effd-d8d3-43f6-a8b9-559ec7056283",
+      "path": "Shared/Mo/01 ARCHITECTURE BLUEPRINT.md",
+      "lastModified": 1771265365135,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "f6e9cbca-6e17-4a66-a5b3-426f2ee617b3": {
+      "id": "f6e9cbca-6e17-4a66-a5b3-426f2ee617b3",
+      "path": "Shared/Mo/PNPM MIGRATION TRACKER.md",
+      "lastModified": 1771265365136,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "c31864d2-c69e-403b-8000-56db66e4c245": {
+      "id": "c31864d2-c69e-403b-8000-56db66e4c245",
+      "path": "Shared/Mo/Complete API Endpoint Migration Tracker.md",
+      "lastModified": 1771265365137,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "f3ef5b00-7cf4-434a-aafb-65ff0279cb2f": {
+      "id": "f3ef5b00-7cf4-434a-aafb-65ff0279cb2f",
+      "path": "Shared/Mo/Production Error Debugging - Shoppeec_Naridon.md",
+      "lastModified": 1771265365137,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "ee54205a-5634-43df-b4f9-ae86f101e939": {
+      "id": "ee54205a-5634-43df-b4f9-ae86f101e939",
+      "path": "Shared/Mo/SERVER SETUP.md",
+      "lastModified": 1771265365141,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "8c57e978-cfb8-42fa-8a6d-67ce466aecbd": {
+      "id": "8c57e978-cfb8-42fa-8a6d-67ce466aecbd",
+      "path": "Shared/Mo/Appendix_ Code Implementation Examples.md",
+      "lastModified": 1771265365145,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "eb75a3d5-e456-4ce2-90b9-831f7264bf30": {
+      "id": "eb75a3d5-e456-4ce2-90b9-831f7264bf30",
+      "path": "Shared/Mo/SHOPIFY VERIFICATION.md",
+      "lastModified": 1771265365147,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "906b2938-75f8-421a-8655-96f6734d2e5d": {
+      "id": "906b2938-75f8-421a-8655-96f6734d2e5d",
+      "path": "Shared/Mo/DEBUG CHART ISSUE.md",
+      "lastModified": 1771265365147,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "86d63822-d01f-4662-8649-dd8066c06141": {
+      "id": "86d63822-d01f-4662-8649-dd8066c06141",
+      "path": "Shared/Mo/New Note where_.md",
+      "lastModified": 1771265365148,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "80499ca1-756d-4cfd-be9d-786fd1c2334d": {
+      "id": "80499ca1-756d-4cfd-be9d-786fd1c2334d",
+      "path": "Shared/Mo/Onboarding Guide_ Shopware Private App.md",
+      "lastModified": 1771265365149,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "22b451a6-9088-41b7-b349-03de7446f329": {
+      "id": "22b451a6-9088-41b7-b349-03de7446f329",
+      "path": "Shared/Mo/DEEP COMPARISON.md",
+      "lastModified": 1771265365149,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": [
+        "cloud"
+      ]
+    },
+    "d9cb35f3-67a4-40ac-8a5b-0eddc029ec6d": {
+      "id": "d9cb35f3-67a4-40ac-8a5b-0eddc029ec6d",
+      "path": "Monorepo Architecture & Multi-Platform Strategy.md",
+      "lastModified": 1771355530601,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "08a1383a-4b26-453d-8f52-b2f624979614": {
+      "id": "08a1383a-4b26-453d-8f52-b2f624979614",
+      "path": "PROCESS_COST_ANALYSIS.md",
+      "lastModified": 1771355534373,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "43e62bac-a217-4d53-924c-8f33536f4d2b": {
+      "id": "43e62bac-a217-4d53-924c-8f33536f4d2b",
+      "path": "auth-migration-architecture.md",
+      "lastModified": 1771355538827,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "771a62da-1974-439e-a244-afe0952cdbc5": {
+      "id": "771a62da-1974-439e-a244-afe0952cdbc5",
+      "path": "production-migration/backend/SERVER_SETUP.md",
+      "lastModified": 1771355542337,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "2b70684b-7578-49ae-8e0a-d6b9b7294460": {
+      "id": "2b70684b-7578-49ae-8e0a-d6b9b7294460",
+      "path": "production-migration/deployment/DOCKER_AND_ENV.md",
+      "lastModified": 1771355544026,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "3cdcf38d-54b3-48cd-b1ce-255b03573f34": {
+      "id": "3cdcf38d-54b3-48cd-b1ce-255b03573f34",
+      "path": "production-migration/deployment/AWS_DEPLOYMENT.md",
+      "lastModified": 1771355544588,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "9a724578-4f0a-4122-8bf3-d237e85ea725": {
+      "id": "9a724578-4f0a-4122-8bf3-d237e85ea725",
+      "path": "production-migration/deployment/SHOPIFY_SUBMISSION.md",
+      "lastModified": 1771355545048,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "def70913-490a-4cbd-ac96-a54af5e5a018": {
+      "id": "def70913-490a-4cbd-ac96-a54af5e5a018",
+      "path": "production-migration/deployment/SHOPIFY_VERIFICATION.md",
+      "lastModified": 1771355546208,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "c6feb649-4bf5-481a-8170-f8ce8f392183": {
+      "id": "c6feb649-4bf5-481a-8170-f8ce8f392183",
+      "path": "future-roadmap/02_BACKEND_EVOLUTION.md",
+      "lastModified": 1771355547431,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "7be8510d-1bb1-4630-a6da-d328d03c866c": {
+      "id": "7be8510d-1bb1-4630-a6da-d328d03c866c",
+      "path": "future-roadmap/04_FRONTEND_HYBRID_MODEL.md",
+      "lastModified": 1771355547785,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "06d49d3c-7291-4cc6-a0ff-aa17760587cf": {
+      "id": "06d49d3c-7291-4cc6-a0ff-aa17760587cf",
+      "path": "Shared/Mo/06 AUTH AND SECURITY FLOWS.md",
+      "lastModified": 1771355548157,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "65d239d5-0c46-4416-b3a7-5e9adcafd8f0": {
+      "id": "65d239d5-0c46-4416-b3a7-5e9adcafd8f0",
+      "path": "future-roadmap/06_AUTH_AND_SECURITY_FLOWS.md",
+      "lastModified": 1771400665693,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "c9254477-edf5-4727-b3c0-64e37dc33f03": {
+      "id": "c9254477-edf5-4727-b3c0-64e37dc33f03",
+      "path": "DEBUG_SENTIMENT_ISSUE.md",
+      "lastModified": 1771401010329,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "0a895996-eb97-4b57-8561-971c44f40cd4": {
+      "id": "0a895996-eb97-4b57-8561-971c44f40cd4",
+      "path": "STANDALONE_ARCHITECTURE.md",
+      "lastModified": 1771401076601,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "cd9998a4-8d3c-4ca1-a70a-d44c431299eb": {
+      "id": "cd9998a4-8d3c-4ca1-a70a-d44c431299eb",
+      "path": "onboarding/shopify-custom-app.md",
+      "lastModified": 1772870512113,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "d0125e61-b4c1-445f-bd5f-8ca8bdd09985": {
+      "id": "d0125e61-b4c1-445f-bd5f-8ca8bdd09985",
+      "path": "future-roadmap/03_DATABASE_MIGRATION_STRATEGY.md",
+      "lastModified": 1772872431606,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "a35c14c5-476f-490f-ab08-0451afbd0c36": {
+      "id": "a35c14c5-476f-490f-ab08-0451afbd0c36",
+      "path": "example-markdown_imported.md",
+      "lastModified": 1772872660248,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "c9a11f55-74ab-4f2a-9a40-632790499d0b": {
+      "id": "c9a11f55-74ab-4f2a-9a40-632790499d0b",
+      "path": "example-markdown.md",
+      "lastModified": 1772872665128,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "766b7e78-4b82-4b64-96e4-64fbabda4fd7": {
+      "id": "766b7e78-4b82-4b64-96e4-64fbabda4fd7",
+      "path": "example-markdown_imported_imported.md",
+      "lastModified": 1772874033123,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "4b05e0e6-95c1-4c29-b660-b3b9f656edb2": {
+      "id": "4b05e0e6-95c1-4c29-b660-b3b9f656edb2",
+      "path": "example-markdown_imported_imported_imported.md",
+      "lastModified": 1772874252681,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "84b04b6c-7774-4959-9842-7b6c4b512f3f": {
+      "id": "84b04b6c-7774-4959-9842-7b6c4b512f3f",
+      "path": "example-markdown_imported_imported_imported_imported.md",
+      "lastModified": 1772874589584,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "e605a4ff-585f-47eb-aba0-90b3b87aa011": {
+      "id": "e605a4ff-585f-47eb-aba0-90b3b87aa011",
+      "path": "migration-manual/01_PHASE_1_PREPARATION.md",
+      "lastModified": 1772877150469,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "8415da57-ab73-410d-a02c-b78265cec989": {
+      "id": "8415da57-ab73-410d-a02c-b78265cec989",
+      "path": "migration-manual/02_PHASE_2_DOMAIN_ARCHITECTURE.md",
+      "lastModified": 1772877151092,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "2bbfa009-a05c-41f6-af7d-1616389811ef": {
+      "id": "2bbfa009-a05c-41f6-af7d-1616389811ef",
+      "path": "migration-manual/04_PHASE_4_INTEGRATION.md",
+      "lastModified": 1772877153079,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "d0a5ae0b-beac-41a3-a8c6-bee3abef48a2": {
+      "id": "d0a5ae0b-beac-41a3-a8c6-bee3abef48a2",
+      "path": "master-optimization-plan/AI_SAFETY_GUARDRAILS.md",
+      "lastModified": 1772877665056,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "1053b660-df06-4696-8115-36ce31eb6ce7": {
+      "id": "1053b660-df06-4696-8115-36ce31eb6ce7",
+      "path": "master-optimization-plan/FIX_PRIORITIZATION_MODEL.md",
+      "lastModified": 1772877666281,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "9f712e56-78f1-46c8-932d-f29c8eda7851": {
+      "id": "9f712e56-78f1-46c8-932d-f29c8eda7851",
+      "path": "master-optimization-plan/MASTER_PLAN.md",
+      "lastModified": 1772877666821,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "d637b126-e85e-45ce-87d0-b107234d412a": {
+      "id": "d637b126-e85e-45ce-87d0-b107234d412a",
+      "path": "master-optimization-plan/Unified Optimization Engine_ Detailed Implementation Roadmap.md",
+      "lastModified": 1772877674767,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "a7263fee-5fbd-4924-8149-59e4bd74753e": {
+      "id": "a7263fee-5fbd-4924-8149-59e4bd74753e",
+      "path": "master-optimization-plan/UI_MIGRATION_PLAN.md",
+      "lastModified": 1772877680143,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "3c587e2f-1f62-4b4c-8326-c699cfa243b2": {
+      "id": "3c587e2f-1f62-4b4c-8326-c699cfa243b2",
+      "path": "master-optimization-plan/WEBFLOW_APP_TYPE.md",
+      "lastModified": 1772877681249,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "e98366e1-3e26-4bb0-9f67-67be0bab7386": {
+      "id": "e98366e1-3e26-4bb0-9f67-67be0bab7386",
+      "path": "onboarding/sales-team-guide.md",
+      "lastModified": 1772877688783,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "aea64a0e-c8e6-4a60-bf35-4a0420aa269a": {
+      "id": "aea64a0e-c8e6-4a60-bf35-4a0420aa269a",
+      "path": "onboarding/standalone-web.md",
+      "lastModified": 1772877692232,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "3021a314-6082-42e1-ac99-cb87ac877b28": {
+      "id": "3021a314-6082-42e1-ac99-cb87ac877b28",
+      "path": "onboarding/shopware-private-app.md",
+      "lastModified": 1772877692776,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "514da614-1b06-43a1-9d01-4873ec30e4a5": {
+      "id": "514da614-1b06-43a1-9d01-4873ec30e4a5",
+      "path": "migration-manual/03_PHASE_3_INFRASTRUCTURE.md",
+      "lastModified": 1772877698157,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "349804d3-b681-4c5c-a696-4c9d09ca0822": {
+      "id": "349804d3-b681-4c5c-a696-4c9d09ca0822",
+      "path": "migration-manual/05_APPENDIX_CODE_DIFFS.md",
+      "lastModified": 1772877729076,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "ebd076f8-718f-42a0-98a1-daa80467d94d": {
+      "id": "ebd076f8-718f-42a0-98a1-daa80467d94d",
+      "path": "future-roadmap/05_SHARED_FEATURES_GENERALIZATION.md",
+      "lastModified": 1772877731792,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "3f9e5be0-12e7-434f-8c17-0cee4cbdb741": {
+      "id": "3f9e5be0-12e7-434f-8c17-0cee4cbdb741",
+      "path": "onboarding/shopify-public-app.md",
+      "lastModified": 1772877770617,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "c9e64ae3-5764-4037-ac90-dea8b034729a": {
+      "id": "c9e64ae3-5764-4037-ac90-dea8b034729a",
+      "path": "future-roadmap/01_ARCHITECTURE_BLUEPRINT.md",
+      "lastModified": 1772877794838,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "2cd5afe1-131d-4acd-a34c-9fb6c58fe8d6": {
+      "id": "2cd5afe1-131d-4acd-a34c-9fb6c58fe8d6",
+      "path": "production-migration/common/ARCHITECTURE.md",
+      "lastModified": 1772889494939,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "730bace5-2c51-4d8a-9b44-c3dd959094c7": {
+      "id": "730bace5-2c51-4d8a-9b44-c3dd959094c7",
+      "path": "migration-manual/README.md",
+      "lastModified": 1772889535107,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "a56f19eb-ea3e-453b-8ec2-6460f949f323": {
+      "id": "a56f19eb-ea3e-453b-8ec2-6460f949f323",
+      "path": "migration-manual/PROGRESS_TRACKER.md",
+      "lastModified": 1772889535647,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "565ee939-8d2e-43ce-b9ea-c976707687d0": {
+      "id": "565ee939-8d2e-43ce-b9ea-c976707687d0",
+      "path": "master-optimization-plan/ARCHITECTURAL_CONCEPTS.md",
+      "lastModified": 1772889542853,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "2898b487-494a-4aa5-9687-cd459c84b273": {
+      "id": "2898b487-494a-4aa5-9687-cd459c84b273",
+      "path": "master-optimization-plan/CAPABILITY_CATALOG.md",
+      "lastModified": 1772889544355,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    },
+    "bdf4e43f-e5a9-4eb1-994a-2e72f5f6da09": {
+      "id": "bdf4e43f-e5a9-4eb1-994a-2e72f5f6da09",
+      "path": "T.md",
+      "lastModified": 1772890366041,
+      "headHash": null,
+      "encryptionKeyId": "default",
+      "peers": [],
+      "tags": []
+    }
+  }
+}

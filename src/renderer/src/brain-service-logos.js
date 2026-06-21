@@ -41,4 +41,20 @@ export function serviceLogo(kind) {
   return LOGOS[kind] || LOGOS.service
 }
 
+/**
+ * The Company Brain's own identity mark — a subtle two-point "spark" (the modern
+ * AI glyph), monochrome via `currentColor` so it inherits text colour. Replaces
+ * the old brain icon everywhere the Brain identifies itself. Size via CSS on the
+ * `.brain-spark` class (defaults to 16px).
+ *
+ * @param {string} [cls] extra class(es) to add alongside `brain-spark`
+ */
+export function sparkIcon(cls = '') {
+  const klass = `brain-spark${cls ? ` ${cls}` : ''}`
+  return `<svg class="${klass}" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true" focusable="false">`
+    + '<path d="M12 2.25c.34 4.06 1.69 6.16 6.25 6.75-4.56.59-5.91 2.69-6.25 6.75-.34-4.06-1.69-6.16-6.25-6.75 4.56-.59 5.91-2.69 6.25-6.75z"/>'
+    + '<path d="M18.25 14.5c.16 1.94.81 2.94 2.75 3.25-1.94.31-2.59 1.31-2.75 3.25-.16-1.94-.81-2.94-2.75-3.25 1.94-.31 2.59-1.31 2.75-3.25z"/>'
+    + '</svg>'
+}
+
 export default serviceLogo

@@ -14,6 +14,7 @@
  * markdown rendering is intentionally not attempted, to keep this robust.
  */
 import { WidgetType } from '@codemirror/view'
+import { renderInline } from './cm-inline-render'
 
 // Matches the first line of a callout blockquote.
 export const CALLOUT_RE = /^>\s*\[!(\w+)\]\s*(.*)$/i
@@ -81,7 +82,7 @@ export class CalloutWidget extends WidgetType {
     icon.textContent = meta.icon
     const titleText = document.createElement('span')
     titleText.className = 'cm-callout-title-text'
-    titleText.textContent = title
+    titleText.innerHTML = renderInline(title)
     head.appendChild(icon)
     head.appendChild(titleText)
     box.appendChild(head)
@@ -92,9 +93,9 @@ export class CalloutWidget extends WidgetType {
       for (const line of body) {
         const p = document.createElement('div')
         p.className = 'cm-callout-line'
-        // Plain text; preserve blank lines as a gap.
-        p.textContent = line
+        // Render inline markdown + math; preserve blank lines as a gap.
         if (line.trim() === '') p.innerHTML = '&nbsp;'
+        else p.innerHTML = renderInline(line)
         bodyEl.appendChild(p)
       }
       box.appendChild(bodyEl)

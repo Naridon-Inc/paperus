@@ -176,10 +176,10 @@ export function buildCapabilitiesMarkdown(controller) {
     const counts = liveRegistryCounts(controller)
 
     const lines = []
-    lines.push('# Notionless — live capability catalog (`apiVersion: "1"`)')
+    lines.push('# Paperus — live capability catalog (`apiVersion: "1"`)')
     lines.push('')
     lines.push(
-      'This file is generated from the **running** Notionless host at the moment '
+      'This file is generated from the **running** Paperus host at the moment '
       + 'this workspace was created. It is the authoritative list of what a plugin '
       + 'can extend RIGHT NOW, the `ctx` call that registers each surface, the '
       + 'capability string the manifest must declare, and whether that capability is '
@@ -269,7 +269,7 @@ export function buildCapabilitiesMarkdown(controller) {
   } catch (e) {
     // Absolute last resort: a minimal valid doc so workspace creation never fails.
     return [
-      '# Notionless — capability catalog (apiVersion "1")',
+      '# Paperus — capability catalog (apiVersion "1")',
       '',
       '_(The live catalog could not be generated: '
         + ((e && e.message) || String(e)) + '.)_',

@@ -47,7 +47,7 @@ export function createHomeScreen({ app }) {
     label: 'New note',
     onTap: () => { app.newNote() },
   })
-  const header = Header({ title: 'Notionless', left: menuBtn, right: newBtn })
+  const header = Header({ title: 'Paperus', left: menuBtn, right: newBtn })
 
   // ── Scrollable list region ────────────────────────────────────────────────────
   const listEl = el('div', { class: 'mob-home-list' })
@@ -66,7 +66,7 @@ export function createHomeScreen({ app }) {
   // Resolve the active team's display name from getTeams() (carries {teamId,name})
   // rather than getName(), which throws for an id init() hasn't loaded yet.
   const resolveTeamName = (teamId) => {
-    if (!teamId) return 'Notionless'
+    if (!teamId) return 'Paperus'
     try {
       const match = tm.getTeams().find((t) => t.teamId === teamId)
       return (match && match.name) || 'Team'

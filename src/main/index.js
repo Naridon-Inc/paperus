@@ -1,5 +1,9 @@
 import { app, shell, BrowserWindow, ipcMain, dialog, Menu, systemPreferences, safeStorage } from 'electron'
-import { autoUpdater } from 'electron-updater'
+// electron-updater is CommonJS; the externalize-deps main build emits a raw ESM
+// named import that Node can't resolve (`autoUpdater` isn't lexer-detectable), so
+// default-import the module and destructure.
+import electronUpdater from 'electron-updater'
+const { autoUpdater } = electronUpdater
 import { join, basename, extname } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import fs from 'fs-extra'
@@ -7,8 +11,10 @@ import settings from 'electron-settings'
 import { ManifestManager } from './manifest' // Import Manifest
 import * as gitSync from './git-sync' // Obsidian-style git-repo sync
 import { registerPluginIpc, refreshPluginWatcher } from './plugin-manager' // Sandboxed plugin system (main-process IPC + hot-reload watcher)
-import { registerStudioIpc } from './plugin-studio/studio-manager' // Plugin Studio: agentic plugin builder (author-time, consent-gated, OFF by default)
-import { resolveClaudeBin, resolveGeminiBin, resolveBin, cliEnv } from './plugin-studio/cli-discovery' // Robust harness discovery (login-shell PATH aware) shared with the Studio
+import { registerEmailIpc } from './email/ipc.js' // Bring-your-own IMAP/SMTP email subsystem (main-process transport + local better-sqlite3 cache)
+import { registerCalendarIpc } from './calendar/ipc.js' // Bring-your-own CalDAV calendar subsystem (tsdav/ical.js transport + local better-sqlite3 cache)
+import { registerMcpIpc } from './mcp/ipc.js' // Model Context Protocol client pool — connect any MCP server (stdio/HTTP) and expose its tools to the Brain
+import { resolveClaudeBin, resolveGeminiBin, resolveBin, cliEnv } from './plugin-studio/cli-discovery' // Robust harness discovery (login-shell PATH aware), shared with the Brain's CLI probes
 import { WebSocketServer } from 'ws'
 import { execFile } from 'child_process'
 import http from 'http'
@@ -34,9 +40,19 @@ Sentry.init({
   dsn: "https://b099dd12c10c487532db7dd6a77221de@o4507310143045632.ingest.de.sentry.io/4510861406502992",
 });
 
-// Force app name (helpful in dev mode)
+// Display name is "Paperus" (the packaged macOS bundle's CFBundleName drives the
+// menu bar; setName covers dev/unpackaged runs). The on-disk data directory is
+// deliberately PINNED to the legacy "Notionless" location, though — the rename is
+// brand-only, and letting the app-name change cascade into the userData path
+// would silently orphan every existing install's settings, history, and
+// IndexedDB. Keeping the data dir stable preserves continuity across the rename.
+try {
+  app.setPath('userData', path.join(app.getPath('appData'), 'Notionless'))
+} catch (e) {
+  console.warn('[Main] could not pin legacy userData dir:', e)
+}
 if (process.platform === 'darwin') {
-  app.setName('Notionless')
+  app.setName('Paperus')
 }
 
 let manifests = new Map(); // Map<rootPath, ManifestManager>
@@ -472,6 +488,36 @@ function buildSafeOllamaUrl(endpoint, requestPath) {
   return target.toString()
 }
 
+// --- Company Brain warm path ------------------------------------------------
+// Resolving the Claude Code CLI walks the user's real login-shell PATH (slow on
+// first call from a GUI launch) and the OS has to page in node + the `claude`
+// binary on first exec. We do that work ONCE at app open via a free `--version`
+// probe so the Brain's first real query has no cold start. The result is cached
+// (5-min TTL) and served straight to the availability handler.
+let claudeWarm = null // { ok, available, version, path, at }
+let claudeWarmInflight = null
+const CLAUDE_WARM_TTL = 5 * 60 * 1000
+
+function warmClaude(force = false) {
+  if (claudeWarmInflight) return claudeWarmInflight
+  if (!force && claudeWarm && (Date.now() - claudeWarm.at) < CLAUDE_WARM_TTL) {
+    return Promise.resolve(claudeWarm)
+  }
+  claudeWarmInflight = new Promise((resolve) => {
+    let bin = null
+    try { bin = resolveClaudeBin(app) } catch (_e) { bin = null }
+    const finish = (val) => { claudeWarm = { ...val, at: Date.now() }; claudeWarmInflight = null; resolve(claudeWarm) }
+    if (!bin) return finish({ ok: false, available: false })
+    try {
+      execFile(bin, ['--version'], { timeout: 8000, env: cliEnv(app) }, (err, stdout) => {
+        if (err) finish({ ok: false, available: false, error: err.message, path: bin })
+        else finish({ ok: true, available: true, version: String(stdout || '').trim(), path: bin })
+      })
+    } catch (e) { finish({ ok: false, available: false, error: e?.message }) }
+  })
+  return claudeWarmInflight
+}
+
 // Register IPC Handlers (Global, only once)
 function registerIPCHandlers(mainWindow) {
   // IPC Handlers
@@ -648,7 +694,13 @@ function registerIPCHandlers(mainWindow) {
     } catch (e) { resolve({ ok: false, available: false, error: e?.message }) }
   })
 
-  ipcMain.handle('ai:claude-code-available', async () => probeCli(resolveClaudeBin(app)))
+  // Serve the app-open warm-up when it's still fresh (instant); otherwise probe
+  // now and refresh the cache. Strip the internal `at` timestamp from the reply.
+  ipcMain.handle('ai:claude-code-available', async () => {
+    const w = await warmClaude(false)
+    const { at, ...rest } = w || {}
+    return rest
+  })
 
   // Parity probe for Gemini CLI ("or gemini or whatever they have").
   ipcMain.handle('ai:gemini-available', async () => probeCli(resolveGeminiBin(app)))
@@ -666,8 +718,26 @@ function registerIPCHandlers(mainWindow) {
     if (!bin) return { ok: false, error: 'Claude Code CLI not found. Install it from claude.com/code, then reopen this panel.' }
     const prompt = String(payload.prompt || '')
     if (!prompt.trim()) return { ok: false, error: 'Empty prompt.' }
-    const args = ['-p', prompt]
+    // `--output-format json` returns an envelope with the EXACT resolved model id
+    // (e.g. claude-opus-4-8), its context window/max output, and token usage/cost —
+    // so the UI can show real model names + token accounting from the agent itself.
+    const args = ['-p', prompt, '--output-format', 'json']
+    // The Brain drives its OWN text-JSON tool loop. If the caller supplies a system
+    // prompt, install it as the REAL session system prompt (`--system-prompt`) and
+    // strip Claude Code's default "You are Claude Code…/your tools are Bash,Edit,…"
+    // sections — otherwise the agent keeps its own identity, treats our Company-Brain
+    // instructions as a prompt-injection to refuse, and never emits our tool JSON.
+    // We also fence off its native file/shell tools so it can only answer in text
+    // (our tool calls run in the renderer, not here).
+    const system = String(payload.system || '')
+    if (system.trim()) {
+      args.push('--system-prompt', system, '--exclude-dynamic-system-prompt-sections')
+      args.push('--disallowed-tools', 'Bash', 'Edit', 'Write', 'Read', 'Agent', 'WebFetch', 'WebSearch')
+    }
     if (payload.model) args.push('--model', String(payload.model))
+    // Session reasoning effort (low|medium|high|xhigh|max). An unknown value just
+    // warns and is ignored by the CLI, so older builds degrade gracefully.
+    if (payload.effort) args.push('--effort', String(payload.effort))
     return await new Promise((resolve) => {
       try {
         execFile(bin, args, {
@@ -676,8 +746,28 @@ function registerIPCHandlers(mainWindow) {
           cwd: app.getPath('temp'),
           env: claudeEnv(),
         }, (err, stdout, stderr) => {
-          if (err) resolve({ ok: false, error: (stderr && String(stderr).trim()) || err.message })
-          else resolve({ ok: true, text: String(stdout || '').trim() })
+          const raw = String(stdout || '').trim()
+          if (err && !raw) { resolve({ ok: false, error: (stderr && String(stderr).trim()) || err.message }); return }
+          // Parse the JSON envelope; fall back to raw stdout if it isn't JSON.
+          try {
+            const j = JSON.parse(raw)
+            const text = (typeof j.result === 'string') ? j.result : raw
+            const model = (j.modelUsage && Object.keys(j.modelUsage)[0]) || j.model || ''
+            const mu = (model && j.modelUsage) ? j.modelUsage[model] : null
+            const u = j.usage || {}
+            resolve({
+              ok: !j.is_error,
+              text,
+              error: j.is_error ? (j.result || 'Claude Code returned an error.') : undefined,
+              model,
+              usage: { input: u.input_tokens, output: u.output_tokens, cacheRead: u.cache_read_input_tokens },
+              costUSD: typeof j.total_cost_usd === 'number' ? j.total_cost_usd : undefined,
+              contextWindow: mu ? mu.contextWindow : undefined,
+              maxOutputTokens: mu ? mu.maxOutputTokens : undefined,
+            })
+          } catch (_e) {
+            resolve({ ok: true, text: raw })
+          }
         })
       } catch (e) { resolve({ ok: false, error: e?.message || 'Claude Code execution failed' }) }
     })
@@ -1464,24 +1554,34 @@ function registerIPCHandlers(mainWindow) {
     console.warn('[Main] Plugin IPC registration failed (plugins disabled):', e)
   }
 
-  // Plugin Studio (author-time, consent-gated, OFF by default). Gated by the same
-  // VITE_FEATURE_PLUGINS_STUDIO flag as the renderer's Features.pluginStudio.
-  // registerStudioIpc is idempotent and never throws across IPC, so a duplicate or
-  // flag-off call is a safe no-op. The studio root is derived from userData, never
-  // the vault — getWorkspaceRoot is passed for signature parity but unused inside.
+  // Bring-your-own email subsystem (IMAP/SMTP via imapflow/nodemailer, local
+  // better-sqlite3 cache, app-password sealed with Electron safeStorage).
+  // registerEmailIpc is idempotent and never throws across IPC, so a duplicate
+  // call is a safe no-op. Paperus hosts nothing here — mail lives only on device.
   try {
-    const studioEnabled = (() => {
-      const v = process.env.VITE_FEATURE_PLUGINS_STUDIO
-      return v === 'true' || v === '1'
-    })()
-    if (studioEnabled) {
-      registerStudioIpc(app, {
-        getWorkspaceRoot: () => settings.getSync('lastProject') || null,
-        getMainWindow: () => mainWindow,
-      })
-    }
+    registerEmailIpc(app, { getMainWindow: () => mainWindow })
   } catch (e) {
-    console.warn('[Main] Studio IPC registration failed (studio disabled):', e)
+    console.warn('[Main] Email IPC registration failed (email disabled):', e)
+  }
+
+  // Bring-your-own CalDAV calendar subsystem (tsdav + ical.js, local better-
+  // sqlite3 cache, app-password sealed with Electron safeStorage). Mirrors the
+  // email subsystem: registerCalendarIpc is idempotent and never throws across
+  // IPC, so a duplicate call is a safe no-op. Paperus hosts nothing here — the
+  // calendar lives only on device and talks directly to the user's CalDAV server.
+  try {
+    registerCalendarIpc(app, { getMainWindow: () => mainWindow })
+  } catch (e) {
+    console.warn('[Main] Calendar IPC registration failed (calendar disabled):', e)
+  }
+
+  // Model Context Protocol client pool — lets the Company Brain connect to ANY
+  // MCP server (local stdio command or remote HTTP/SSE) and call its tools from
+  // chat. Servers + secrets live only on device (userData/mcp/servers.json).
+  try {
+    registerMcpIpc(app, { getMainWindow: () => mainWindow })
+  } catch (e) {
+    console.warn('[Main] MCP IPC registration failed (MCP disabled):', e)
   }
 
   console.log('[Main] IPC Handlers Registered')
@@ -1683,6 +1783,12 @@ app.whenReady().then(() => {
 
   const mainWindow = createWindow()
   registerIPCHandlers(mainWindow)
+
+  // Spin up the Company Brain's Claude backend the moment the app opens: a free
+  // `--version` probe primes the login-PATH resolver + node + the binary in the
+  // OS cache, so the user's first Brain query has no cold-start delay. Deferred a
+  // beat so it never competes with window paint; failures are silently cached.
+  setTimeout(() => { warmClaude(true).catch(() => {}) }, 1200)
 
   // If a notionless:// link launched us (open-url before the window existed),
   // deliver it now that the renderer is loading.

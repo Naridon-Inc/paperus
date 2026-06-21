@@ -63,7 +63,7 @@ export class TeamManager {
                     </div>
 
                     <div style="margin-top:auto; padding: 12px; font-size:11px; color:#999;">
-                        Notionless v1.0.1
+                        Paperus v1.0.1
                     </div>
                 </div>
                 <div class="settings-content" id="settings-content"></div>
@@ -187,7 +187,7 @@ export class TeamManager {
           container.innerHTML = `
             <h2>Git Sync</h2>
             <div class="settings-section">
-              <p style="color:#666;">Git sync is available in the Notionless desktop app, where your notes live as Markdown files on disk. Open the desktop app to connect a repository.</p>
+              <p style="color:#666;">Git sync is available in the Paperus desktop app, where your notes live as Markdown files on disk. Open the desktop app to connect a repository.</p>
             </div>`;
           return;
       }
@@ -235,7 +235,7 @@ export class TeamManager {
       `;
 
       const tokenLink = document.getElementById('git-token-link');
-      if (tokenLink) tokenLink.onclick = (e) => { e.preventDefault(); const u = 'https://github.com/settings/tokens/new?scopes=repo&description=Notionless'; if (window.api.send) window.api.send('open-external', u); else window.open(u, '_blank'); };
+      if (tokenLink) tokenLink.onclick = (e) => { e.preventDefault(); const u = 'https://github.com/settings/tokens/new?scopes=repo&description=Paperus'; if (window.api.send) window.api.send('open-external', u); else window.open(u, '_blank'); };
 
       const statusBox = document.getElementById('git-status-box');
       const refreshStatus = async () => {
@@ -815,7 +815,7 @@ export class TeamManager {
     container.innerHTML = `
       <div style="max-width: 400px; margin: 0 auto; padding-top: 40px;">
         <h2 style="margin-bottom: 24px;">Sign In <span style="font-size:12px;font-weight:400;color:#999;">(optional)</span></h2>
-        <p style="color: #666; margin-bottom: 24px;">Notionless works fully offline. Sign in only if you want to sync across devices or collaborate in real time.</p>
+        <p style="color: #666; margin-bottom: 24px;">Paperus works fully offline. Sign in only if you want to sync across devices or collaborate in real time.</p>
 
         ${showGithub ? `
             <button class="btn" id="btn-github-login" style="width: 100%; justify-content: center; margin-bottom: 12px; padding: 10px; background: #24292f; color: #fff; border: none;">
@@ -897,7 +897,7 @@ export class TeamManager {
     const bioBtn = document.getElementById('btn-biometric-login');
     if (bioBtn) {
         bioBtn.onclick = async () => {
-            const success = await authClient.promptBiometrics('Sign in to Notionless');
+            const success = await authClient.promptBiometrics('Sign in to Paperus');
             if (success) {
                 const token = await authClient.loadSecureToken();
                 if (token) {

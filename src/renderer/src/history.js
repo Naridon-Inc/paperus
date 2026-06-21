@@ -1,8 +1,9 @@
 import * as Y from 'yjs'
 import { cryptoManager } from './crypto'
 import sodium from 'libsodium-wrappers'
-import { diffWords } from 'diff'
+import { diffArrays } from 'diff'
 import { setReadOnly } from './cm-editor'
+import { Markdown } from './markdown'
 
 export class HistoryManager {
   constructor() {
@@ -159,19 +160,52 @@ export class HistoryManager {
     const cm = currentBody.match(/^# (.*)(\n|$)/)
     if (cm) currentBody = currentBody.substring(cm[0].length).trimStart()
 
-    const changes = diffWords(bodyToRender, currentBody)
+    const diffHtml = this._renderedDiff(bodyToRender, currentBody)
+    this.showPreview(`<div class="history-preview-content rendered-diff" style="padding:40px 60px;">${diffHtml}</div>`)
+  }
 
-    const diffHtml = changes.map(part => {
-        const escaped = part.value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')
+  /**
+   * Rendered version diff. Both versions are converted to real HTML via the
+   * project Markdown renderer (so headings, tables, lists, code blocks render as
+   * a document — not raw `##`/`|` markup), then diffed at the BLOCK level: each
+   * top-level block is tinted green if it was added since this version, red if
+   * it was removed. Block granularity keeps every block valid HTML — a changed
+   * paragraph shows as old-red immediately followed by new-green — instead of the
+   * old monospace word-diff that leaked raw Markdown.
+   */
+  _renderedDiff(oldBody, currentBody) {
+    const toBlocks = (md) => {
+      const wrap = document.createElement('div')
+      wrap.innerHTML = Markdown.toHTML(md || '')
+      return Array.from(wrap.children)
+    }
+    const oldBlocks = toBlocks(oldBody)
+    const curBlocks = toBlocks(currentBody)
+    // Compare blocks by normalized HTML so whitespace-only changes don't show.
+    const norm = (el) => el.outerHTML.replace(/\s+/g, ' ').trim()
+    let parts
+    try {
+      parts = diffArrays(oldBlocks.map(norm), curBlocks.map(norm))
+    } catch (_e) {
+      parts = [{ added: true, count: curBlocks.length }]
+    }
+
+    const out = document.createElement('div')
+    let oi = 0
+    let ci = 0
+    for (const part of parts) {
+      for (let k = 0; k < part.count; k++) {
         if (part.added) {
-             return `<span class="diff-added">${escaped}</span>`
+          const el = curBlocks[ci++]; if (el) { el.classList.add('rd-added'); out.appendChild(el) }
         } else if (part.removed) {
-             return `<span class="diff-removed">${escaped}</span>`
+          const el = oldBlocks[oi++]; if (el) { el.classList.add('rd-removed'); out.appendChild(el) }
+        } else {
+          const el = curBlocks[ci++]; oi++; if (el) out.appendChild(el)
         }
-        return escaped
-    }).join('')
-
-    this.showPreview(`<div class="history-preview-content" style="white-space:pre-wrap; font-family:monospace; padding:40px 60px; line-height:1.7;">${diffHtml}</div>`)
+      }
+    }
+    if (!out.children.length) return '<p style="color:#999;">No changes in this version.</p>'
+    return out.innerHTML
   }
 
   ensurePreview() {

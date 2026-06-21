@@ -723,7 +723,10 @@ export class SidebarManager {
      * list container element to render rows into. Idempotent.
      */
     _ensureTopSection(id, title, order) {
-        const scroll = document.getElementById('sidebar-scroll-area')
+        // Favorites + Recent belong to the Home view only (per the Workspace Shell
+        // design — Calendar/Inbox/Chat have their own contextual nav). Mount them
+        // inside the Home panel so they don't bleed across every view.
+        const scroll = document.getElementById('sb-view-home') || document.getElementById('sidebar-scroll-area')
         if (!scroll) return null
         let section = document.getElementById(id)
         if (!section) {

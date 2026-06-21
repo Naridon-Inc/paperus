@@ -1,6 +1,6 @@
-# Paperus Signaling Relay
+# Notionless Signaling Relay
 
-A tiny **stateless** Node WebSocket broker for Paperus's zero-account, pure-P2P
+A tiny **stateless** Node WebSocket broker for Notionless's zero-account, pure-P2P
 model. It **stores nothing** — no database, no accounts, no JWT, no billing, no
 user or document data. It only brokers peer connections.
 
