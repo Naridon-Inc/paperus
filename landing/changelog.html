@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paperus — Changelog</title>
+<meta name="description" content="Every Paperus release, newest first. Local-first, open-source, zero-account Notion alternative with a Claude Code brain.">
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<meta property="og:title" content="Paperus — Changelog">
+<meta property="og:description" content="Every Paperus release, newest first.">
+<meta property="og:type" content="website">
+<style>
+  :root{
+    --bg:#0b0c0e; --bg-frame:#101216; --panel:#131519; --panel-2:#15181d;
+    --line:rgba(255,255,255,0.09); --line-soft:rgba(255,255,255,0.06);
+    --text:#f3f4f6; --muted:#9aa1ac; --faint:#686e79;
+    --accent:#2f9e6e; --accent-bright:#58cf95; --green:#5fd6a0;
+    --accent-soft:rgba(47,158,110,0.13); --accent-line:rgba(47,158,110,0.36);
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased; line-height:1.6;
+  }
+  ::selection{ background:var(--accent-soft); color:var(--accent-bright); }
+  a{ color:inherit; text-decoration:none; }
+
+  /* ── Header ── */
+  .site-header{
+    position:sticky; top:0; z-index:20;
+    background:rgba(11,12,14,0.72); backdrop-filter:saturate(140%) blur(12px);
+    border-bottom:1px solid var(--line-soft);
+  }
+  .nav{ max-width:1040px; margin:0 auto; padding:0 28px; height:64px; display:flex; align-items:center; justify-content:space-between; }
+  .brand{ display:flex; align-items:center; gap:10px; font-weight:650; font-size:16px; letter-spacing:-0.01em; }
+  .brand img{ display:block; }
+  .nav-links{ display:flex; align-items:center; gap:26px; font-size:14px; color:var(--muted); }
+  .nav-links a:hover{ color:var(--text); }
+  .nav-cta{ padding:7px 15px; border:1px solid var(--accent-line); border-radius:999px; background:var(--accent-soft); color:var(--accent-bright)!important; font-weight:500; }
+  .nav-cta:hover{ background:rgba(47,158,110,0.2); }
+  @media(max-width:640px){ .nav-links a.hide-sm{ display:none; } }
+
+  /* ── Hero ── */
+  .wrap{ max-width:860px; margin:0 auto; padding:0 28px; }
+  .hero{ padding:72px 0 8px; }
+  .eyebrow{ font-family:var(--mono); font-size:12px; font-weight:500; letter-spacing:0.16em; text-transform:uppercase; color:var(--accent); }
+  h1{ font-size:clamp(30px,5vw,44px); font-weight:680; letter-spacing:-0.025em; margin:14px 0 0; line-height:1.08; }
+  h1 .accent{ background:linear-gradient(94deg,var(--accent) 0%,var(--accent-bright) 100%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .hero p{ margin-top:16px; color:var(--muted); font-size:16px; max-width:560px; }
+  .hero p a{ color:var(--accent-bright); border-bottom:1px solid var(--accent-line); }
+  .hero p a:hover{ border-color:var(--accent-bright); }
+
+  /* ── Timeline ── */
+  .timeline{ padding:54px 0 30px; }
+  .rel{ position:relative; display:grid; grid-template-columns:120px 1fr; gap:0; }
+  .rel-rail{ position:relative; }
+  .rel-rail::before{ content:""; position:absolute; left:5px; top:7px; bottom:-44px; width:2px; background:linear-gradient(to bottom,var(--line),var(--line-soft)); }
+  .rel:last-child .rel-rail::before{ display:none; }
+  .node{ position:absolute; left:0; top:6px; width:12px; height:12px; border-radius:50%; background:var(--bg); border:2px solid var(--faint); }
+  .rel.now .node{ border-color:var(--accent); background:var(--accent); box-shadow:0 0 0 5px var(--accent-soft); }
+  .rel-date{ font-family:var(--mono); font-size:12px; color:var(--faint); letter-spacing:0.01em; padding-top:4px; }
+
+  .rel-body{ padding:0 0 48px; }
+  .rel-head{ display:flex; align-items:center; gap:11px; flex-wrap:wrap; }
+  .ver{ font-family:var(--mono); font-size:18px; font-weight:600; color:var(--text); letter-spacing:-0.01em; }
+  .pill{ font-family:var(--mono); font-size:10.5px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; padding:3px 9px; border-radius:999px; }
+  .pill.latest{ color:var(--accent-bright); background:var(--accent-soft); border:1px solid var(--accent-line); }
+  .pill.first{ color:var(--muted); background:rgba(255,255,255,0.04); border:1px solid var(--line); }
+  .rel-title{ font-size:19px; font-weight:640; letter-spacing:-0.01em; margin:12px 0 0; }
+  .rel-lede{ color:var(--muted); font-size:14.5px; margin-top:7px; }
+
+  .rel-points{ list-style:none; margin:18px 0 0; display:flex; flex-direction:column; gap:11px; }
+  .rel-points li{ position:relative; padding-left:24px; font-size:14.5px; color:var(--muted); }
+  .rel-points li::before{ content:""; position:absolute; left:4px; top:8px; width:6px; height:6px; border-radius:1.5px; background:var(--accent); transform:rotate(45deg); opacity:.85; }
+  .rel-points li b{ color:var(--text); font-weight:600; }
+  .rel-points code, .rel-lede code{ font-family:var(--mono); background:var(--panel-2); border:1px solid var(--line-soft); padding:1px 6px; border-radius:5px; font-size:12px; color:var(--accent-bright); }
+
+  .tags{ display:flex; flex-wrap:wrap; gap:7px; margin-top:16px; }
+  .tag{ font-family:var(--mono); font-size:11px; letter-spacing:0.02em; color:var(--muted); padding:4px 10px; border:1px solid var(--line); border-radius:7px; background:var(--panel); }
+  .rel-link{ display:inline-flex; align-items:center; gap:6px; margin-top:18px; font-family:var(--mono); font-size:12.5px; color:var(--accent-bright); border-bottom:1px solid var(--accent-line); padding-bottom:1px; }
+  .rel-link:hover{ border-color:var(--accent-bright); }
+  .rel-link svg{ width:12px; height:12px; }
+
+  /* ── Foot CTA ── */
+  .endcap{ margin:14px 0 0; padding:30px 28px; border:1px solid var(--line); border-radius:16px; background:var(--bg-frame); text-align:center; }
+  .endcap p{ color:var(--muted); font-size:14.5px; }
+  .endcap .btn{ display:inline-flex; align-items:center; gap:9px; margin-top:16px; padding:11px 20px; border-radius:10px; background:var(--text); color:#0b0c0e; font-weight:600; font-size:14px; }
+  .endcap .btn:hover{ background:#fff; }
+  .endcap .alt{ display:block; margin-top:13px; font-family:var(--mono); font-size:12.5px; color:var(--faint); }
+  .endcap .alt a{ color:var(--muted); border-bottom:1px solid var(--line); }
+  .endcap .alt a:hover{ color:var(--text); }
+
+  /* ── Footer ── */
+  footer{ border-top:1px solid var(--line-soft); margin-top:64px; }
+  .foot{ max-width:1040px; margin:0 auto; padding:40px 28px; display:flex; justify-content:space-between; gap:30px; flex-wrap:wrap; }
+  .foot-brand{ display:flex; align-items:center; gap:10px; color:var(--muted); font-size:14px; }
+  .foot-links{ display:flex; gap:22px; flex-wrap:wrap; font-size:13.5px; color:var(--faint); }
+  .foot-links a:hover{ color:var(--text); }
+  .foot-bottom{ max-width:1040px; margin:0 auto; padding:0 28px 40px; font-family:var(--mono); font-size:12px; color:var(--faint); }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="nav">
+    <a class="brand" href="index.html">
+      <img src="logo.svg" width="27" height="27" alt="" aria-hidden="true">
+      Paperus
+    </a>
+    <nav class="nav-links">
+      <a class="hide-sm" href="index.html">Home</a>
+      <a href="https://github.com/Naridon-Inc/paperus" target="_blank" rel="noopener">GitHub</a>
+      <a class="nav-cta" href="index.html#download">Download</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="hero">
+    <div class="eyebrow">Changelog</div>
+    <h1>What&rsquo;s new in <span class="accent">Paperus</span></h1>
+    <p>Every release, newest first. Full notes and source for each version live on
+       <a href="https://github.com/Naridon-Inc/paperus/releases" target="_blank" rel="noopener">GitHub Releases</a>.</p>
+  </section>
+
+  <section class="timeline">
+
+    <!-- ───────── v1.3.0 ───────── -->
+    <article class="rel now" id="v1-3-0">
+      <div class="rel-rail">
+        <span class="node"></span>
+        <div class="rel-date">June&nbsp;21,&nbsp;2026</div>
+      </div>
+      <div class="rel-body">
+        <div class="rel-head">
+          <span class="ver">v1.3.0</span>
+          <span class="pill latest">Latest</span>
+        </div>
+        <h2 class="rel-title">Email, Calendar &amp; an extensible tool layer</h2>
+        <p class="rel-lede">Paperus grows past notes into a quiet local-first workspace — mail, calendar and a
+           pluggable tool layer, all driven by the built-in Claude Code brain.</p>
+        <ul class="rel-points">
+          <li><b>Email (beta)</b> — connect IMAP/SMTP accounts, a unified <em>All&nbsp;inboxes</em> across every account,
+              newest-first sync of Inbox/Sent/Drafts/Spam/Trash/Archive, background body prefetch, and agentic
+              compose with a send-approval gate.</li>
+          <li><b>Calendar</b> — connect external calendars over <b>CalDAV</b> (iCloud, Fastmail, or generic app-password);
+              events sit alongside your notes and due dates.</li>
+          <li><b>MCP</b> — a Model Context Protocol manager: add MCP servers and scope their tools per agent inside the brain.</li>
+          <li><b>New surfaces</b> — Tasks, Calendar, Inbox and Email panels built on a React-island platform (<code>@medusajs/ui</code>),
+              folded into one clean sidebar with thin line icons.</li>
+          <li>Agent presets + a custom-agent builder, redesigned chat sidebar, and live model picker with reasoning effort.</li>
+        </ul>
+        <div class="tags">
+          <span class="tag">Email</span><span class="tag">Calendar</span><span class="tag">MCP</span>
+          <span class="tag">Agents</span><span class="tag">macOS&nbsp;universal</span>
+        </div>
+        <a class="rel-link" href="https://github.com/Naridon-Inc/paperus/releases/tag/v1.3.0" target="_blank" rel="noopener">
+          Release notes
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
+        </a>
+      </div>
+    </article>
+
+    <!-- ───────── v1.2.0 ───────── -->
+    <article class="rel" id="v1-2-0">
+      <div class="rel-rail">
+        <span class="node"></span>
+        <div class="rel-date">June&nbsp;5,&nbsp;2026</div>
+      </div>
+      <div class="rel-body">
+        <div class="rel-head">
+          <span class="ver">v1.2.0</span>
+        </div>
+        <h2 class="rel-title">The app is now Paperus</h2>
+        <p class="rel-lede">A clean, ownable name for a tool that isn&rsquo;t a knock-off of anything.</p>
+        <ul class="rel-points">
+          <li>Renamed across every surface to <b>Paperus</b> &mdash; window, dialogs, mobile headers and docs.
+              Existing installs keep all their notes and settings.</li>
+          <li><b>First-run onboarding</b> &mdash; a one-screen welcome: start writing, create a team, or join with a link.</li>
+        </ul>
+        <div class="tags"><span class="tag">Rebrand</span><span class="tag">Onboarding</span></div>
+      </div>
+    </article>
+
+    <!-- ───────── v1.1.0 ───────── -->
+    <article class="rel" id="v1-1-0">
+      <div class="rel-rail">
+        <span class="node"></span>
+        <div class="rel-date">June&nbsp;5,&nbsp;2026</div>
+      </div>
+      <div class="rel-body">
+        <div class="rel-head">
+          <span class="ver">v1.1.0</span>
+        </div>
+        <h2 class="rel-title">Self-hosting, optional accounts &amp; the Claude Code brain</h2>
+        <p class="rel-lede">Run the whole thing on your own box, or keep it pure peer-to-peer &mdash; one switch picks the trade-off.</p>
+        <ul class="rel-points">
+          <li><b>Self-hosting</b> &mdash; bring up the full web app + relay on your own domain with one
+              <code>docker compose</code>; automatic HTTPS (Let&rsquo;s Encrypt), <b>no database</b>.</li>
+          <li><b>Two modes</b> &mdash; <code>NL_MODE=online</code> for an always-on, end-to-end-encrypted box that&rsquo;s
+              available 24/7, or <code>p2p</code> for a pure relay that stores nothing.</li>
+          <li><b>Optional accounts</b> &mdash; a lightweight access gate that never holds your encryption keys.</li>
+          <li><b>In-app server connect</b> &mdash; point the desktop app at any relay or team server from settings.</li>
+          <li><b>Company brain</b> &mdash; a Claude Code assistant with a live model picker, reasoning effort,
+              conversation threads, file attachments and agentic skills.</li>
+          <li>Delta auto-update so upgrades download only what changed.</li>
+        </ul>
+        <div class="tags">
+          <span class="tag">Self-hosting</span><span class="tag">Accounts</span>
+          <span class="tag">Online/P2P</span><span class="tag">AI&nbsp;brain</span><span class="tag">Auto-update</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- ───────── v1.0.8 ───────── -->
+    <article class="rel" id="v1-0-8">
+      <div class="rel-rail">
+        <span class="node"></span>
+        <div class="rel-date">June&nbsp;5,&nbsp;2026</div>
+      </div>
+      <div class="rel-body">
+        <div class="rel-head">
+          <span class="ver">v1.0.8</span>
+          <span class="pill first">First public release</span>
+        </div>
+        <h2 class="rel-title">Paperus goes open source</h2>
+        <p class="rel-lede">A local-first, zero-account, pure-P2P Notion alternative &mdash; your notes are plain
+           Markdown files on disk that never leave your machine until you choose to share.</p>
+        <ul class="rel-points">
+          <li><b>Native Markdown editor</b> on CodeMirror&nbsp;6 with live preview &mdash; callouts, toggles, columns,
+              math, Mermaid, images and transclusion.</li>
+          <li><b>Real-time collaboration</b> over Yjs CRDTs; peer-to-peer WebRTC sync brokered by a tiny stateless relay.</li>
+          <li><b>End-to-end encryption</b> (libsodium) &mdash; the relay and your peers only ever see ciphertext.</li>
+          <li><b>One-link teams</b> &mdash; no accounts, no login; share a single invite link to collaborate.</li>
+          <li><b>Signed &amp; notarized</b> universal macOS app (Apple&nbsp;Silicon&nbsp;+&nbsp;Intel).</li>
+          <li>Plugin system and a native iOS &amp; Android companion you can build from source. Licensed <b>AGPL-3.0</b>.</li>
+        </ul>
+        <div class="tags">
+          <span class="tag">Local-first</span><span class="tag">P2P</span><span class="tag">E2EE</span>
+          <span class="tag">CRDT</span><span class="tag">Open&nbsp;source</span>
+        </div>
+        <a class="rel-link" href="https://github.com/Naridon-Inc/paperus/releases/tag/v1.0.8" target="_blank" rel="noopener">
+          Release notes
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
+        </a>
+      </div>
+    </article>
+
+  </section>
+
+  <section class="endcap">
+    <p>Always running the latest? Paperus auto-updates itself in the background.</p>
+    <a class="btn" href="https://github.com/Naridon-Inc/paperus/releases/latest" target="_blank" rel="noopener">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>
+      Download for macOS
+    </a>
+    <span class="alt">Universal &middot; signed &amp; notarized &middot; macOS&nbsp;11+ &middot;
+      <a href="https://github.com/Naridon-Inc/paperus#readme" target="_blank" rel="noopener">build from source</a></span>
+  </section>
+
+</main>
+
+<footer>
+  <div class="foot">
+    <div class="foot-brand">
+      <img src="logo.svg" width="22" height="22" alt="" aria-hidden="true">
+      Paperus
+    </div>
+    <div class="foot-links">
+      <a href="index.html">Home</a>
+      <a href="index.html#download">Download</a>
+      <a href="https://github.com/Naridon-Inc/paperus" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/Naridon-Inc/paperus/releases" target="_blank" rel="noopener">Releases</a>
+      <a href="https://github.com/Naridon-Inc/paperus/blob/master/docs/SELF_HOSTING.md" target="_blank" rel="noopener">Self-hosting</a>
+    </div>
+  </div>
+  <div class="foot-bottom">Open source &middot; AGPL-3.0 &middot; Naridon,&nbsp;Inc.</div>
+</footer>
+
+</body>
+</html>
