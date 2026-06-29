@@ -1,7 +1,7 @@
 {
   "name": "Notionless",
   "productName": "Paperus",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Open-source, local-first, zero-account, pure-P2P Notion alternative. End-to-end encrypted Markdown notes that sync peer-to-peer with no cloud lock-in.",
   "license": "AGPL-3.0-only",
   "author": "Naridon Inc.",

@@ -33,6 +33,7 @@ import { CommentManager } from './comments'
 import { SelectionToolbar } from './selection-toolbar'
 import { BacklinksPanel } from './backlinks'
 import { PageHeader } from './page-header'
+import { PageProperties } from './page-properties'
 import { TemplatePicker } from './templates'
 import { Favorites } from './favorites'
 import { Recents } from './recents'
@@ -122,6 +123,7 @@ let currentOpenPath = null // Absolute path of the currently open local file (fo
 let currentTeamNote = null // { teamId, noteId } when a synced P2P team note is open (else null)
 let backlinksPanel = null // Lazy BacklinksPanel instance
 let pageHeader = null // Page icon/cover header
+let pageProperties = null // Front-matter key/value properties table
 let templatePicker = null // Template picker overlay
 let favorites = null // Favorites / pinned items manager
 let recentsManager = null // Recently-opened docs tracker
@@ -1441,6 +1443,7 @@ function showReactSurfacePage(viewId, surfaceKey) {
         currentOpenPath = null
         if (backlinksPanel) backlinksPanel.clear()
         if (pageHeader) pageHeader.clear()
+        if (pageProperties) pageProperties.clear()
 
         const editor = document.querySelector('.editor-container')
         const mainWrapper = document.querySelector('main')
@@ -1711,6 +1714,8 @@ async function init() {
         if (editorContainer) {
             backlinksPanel = new BacklinksPanel(editorContainer, { openFile: (p) => openFile(p) })
             pageHeader = new PageHeader(editorContainer, { getEngine: () => docEngine })
+            pageProperties = new PageProperties(editorContainer, { getEngine: () => docEngine })
+            window.pageProperties = pageProperties // automation/debug handle (like window.cmView)
         }
     }
     templatePicker = new TemplatePicker({
@@ -3650,6 +3655,7 @@ function mountP2PEngineInEditor(engine, { docName, tabKey, teamNote = null } = {
         rebindEditor(docEngine.text, docEngine)
         window.isUpdatingFromYjs = false
         if (pageHeader) pageHeader.render()
+        if (pageProperties) pageProperties.render()
         if (backlinksPanel) backlinksPanel.clear()
     })
 }
@@ -4002,8 +4008,9 @@ async function loadFileContent(path) {
        window.isUpdatingFromYjs = false;
        console.log('[Main] yCollab binding active. yText len:', yText.length);
 
-       // Render the page icon/cover header from front-matter.
+       // Render the page icon/cover header + properties table from front-matter.
        if (pageHeader) pageHeader.render()
+       if (pageProperties) pageProperties.render()
 
        // Refresh the "Linked references" (backlinks) panel for this page.
        if (backlinksPanel) backlinksPanel.update(path, docId).catch(() => {})
@@ -4422,6 +4429,7 @@ async function showNoFileSelected() {
   currentOpenPath = null
   if (backlinksPanel) backlinksPanel.clear()
   if (pageHeader) pageHeader.clear()
+  if (pageProperties) pageProperties.clear()
   const home = document.getElementById('home-view')
   const mainWrapper = document.querySelector('main')
   const header = document.querySelector('.app-header')
@@ -4483,7 +4491,8 @@ async function showCompanyBrainPage() {
   currentOpenPath = null
   if (backlinksPanel) backlinksPanel.clear()
   if (pageHeader) pageHeader.clear()
-  
+  if (pageProperties) pageProperties.clear()
+
   const home = document.getElementById('home-view')
   const brain = document.getElementById('brain-view')
   const editor = document.querySelector('.editor-container')

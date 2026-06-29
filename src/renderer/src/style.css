@@ -4931,6 +4931,89 @@ li[data-list="checked"] {
 }
 .page-header-add:hover { background: #f0f0ef; color: #37352f; }
 
+/* ── Page properties (front-matter key/value table) ───────────────────────
+   Sits between the page title and the body, aligned to the same 900px text
+   column. Notion/Obsidian-style: muted key column, editable value column,
+   per-row remove on hover, and a faint "Add property" that surfaces on hover
+   so clean pages stay clean. */
+.page-properties {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2px 60px 4px;
+    box-sizing: border-box;
+}
+.editor-container.full-width .page-properties { max-width: 100%; }
+.pp-rows { display: flex; flex-direction: column; }
+.pp-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 30px;
+    border-radius: 5px;
+}
+.pp-row .pp-key,
+.pp-row .pp-val {
+    box-sizing: border-box;
+    border: 1px solid transparent;
+    background: transparent;
+    outline: none;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.4;
+    padding: 4px 7px;
+    border-radius: 5px;
+    color: #37352f;
+}
+.pp-row .pp-key {
+    flex: 0 0 180px;
+    color: #6b6a66;
+}
+.pp-row .pp-val { flex: 1 1 auto; min-width: 0; }
+.pp-row .pp-key::placeholder,
+.pp-row .pp-val::placeholder { color: #b8b6b1; }
+.pp-row .pp-key:hover,
+.pp-row .pp-val:hover { background: #f4f3f1; }
+.pp-row .pp-key:focus,
+.pp-row .pp-val:focus { background: #f4f3f1; border-color: #e3e2df; color: #37352f; }
+.pp-del {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: #b0aeaa;
+    border-radius: 5px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.1s ease, color 0.1s ease, background 0.1s ease;
+}
+.pp-row:hover .pp-del { opacity: 1; }
+.pp-del:hover { background: #f4f3f1; color: #e0594b; }
+.pp-add {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+    padding: 4px 7px;
+    border: none;
+    background: transparent;
+    color: #9b9a96;
+    font-family: inherit;
+    font-size: 13px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: opacity 0.12s ease, background 0.1s ease, color 0.1s ease;
+}
+.pp-add svg { flex: none; }
+.pp-add:hover { background: #f4f3f1; color: #37352f; }
+.pp-add.pp-add-empty { opacity: 0; }
+.editor-container:hover .pp-add.pp-add-empty { opacity: 0.65; }
+.editor-container:hover .pp-add.pp-add-empty:hover { opacity: 1; }
+
 /* Emoji picker */
 .emoji-picker {
     position: fixed;
