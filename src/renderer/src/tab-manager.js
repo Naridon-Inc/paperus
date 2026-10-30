@@ -113,8 +113,11 @@ export class TabManager {
           this.tabs[this.activeTabIndex].title = title
           this.renderTabs()
       } else {
-          // If no tab active (e.g. fresh start), add one
-          this.addTab(path, title)
+          // The caller is already mounting this document. Register the tab
+          // without opening it again (team keys are not filesystem paths).
+          this.tabs.push({ path, title })
+          this.activeTabIndex = this.tabs.length - 1
+          this.renderTabs()
       }
   }
 }

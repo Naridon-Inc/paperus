@@ -14,10 +14,14 @@
 // one origin behind the proxy), so the HttpOnly session cookie just works.
 
 async function getJSON(url, opts) {
-  const res = await fetch(url, { credentials: 'same-origin', ...opts });
-  let body = null;
-  try { body = await res.json(); } catch (e) { /* empty */ }
-  return { ok: res.ok, status: res.status, body };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4000);
+  try {
+    const res = await fetch(url, { credentials: 'same-origin', signal: controller.signal, ...opts });
+    let body = null;
+    try { body = await res.json(); } catch (e) { /* empty */ }
+    return { ok: res.ok, status: res.status, body };
+  } finally { clearTimeout(timer); }
 }
 
 // Returns when the visitor may proceed. Never throws — if the accounts API is

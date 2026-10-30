@@ -24,6 +24,17 @@ export class PageHeader {
     // Insert at the very top of the editor container.
     container.insertBefore(this.el, container.firstChild)
     this._picker = null
+    // A phone sidebar changes the editor width. Re-measure the textarea when
+    // that width changes, otherwise its narrow-layout height stays enormous.
+    if (typeof ResizeObserver !== 'undefined') {
+      let lastWidth = -1
+      this._resizeObserver = new ResizeObserver(([entry]) => {
+        if (entry.contentRect.width === lastWidth) return
+        lastWidth = entry.contentRect.width
+        this._autoGrowTitle()
+      })
+      this._resizeObserver.observe(container)
+    }
   }
 
   clear() {

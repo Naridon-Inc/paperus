@@ -3,8 +3,14 @@
   <head>
     <title>Paperus</title>
     <meta charset="utf-8">
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="./nlconfig.js"></script>
+    <link rel="stylesheet" href="./fontawesome.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Paperus">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png">
     <style>
       body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #fff; }
       .skeleton-wrapper { display: flex; height: 100vh; }
@@ -52,6 +58,7 @@
         </div>
       </div>
     </div>
+    <script type="module" src="./offline-client.js"></script>
     <script type="module" src="./web-main.js"></script>
   </body>
 </html>

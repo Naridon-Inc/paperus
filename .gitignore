@@ -59,3 +59,6 @@ GEMINI.md
 producthunt/
 .mcp.json
 .claude/
+
+# Optional Python browser-regression environment
+.browser-env/

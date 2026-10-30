@@ -1647,6 +1647,11 @@ async function init() {
     tabManager = new TabManager(async (path) => {
         const view = VIEW_TABS[path]
         if (view) { view.show(); return }
+        if (typeof path === 'string' && path.startsWith('team:')) {
+            const [, teamId, noteId] = path.split(':')
+            await openTeamNote(teamId, noteId)
+            return
+        }
         await loadFileContent(path)
     })
     tabManager.onEmptyState = showNoFileSelected
@@ -3650,9 +3655,13 @@ function mountP2PEngineInEditor(engine, { docName, tabKey, teamNote = null } = {
     if (moreMenu) moreMenu.docEngine = docEngine
     currentOpenPath = null
     currentTeamNote = teamNote
+    if (document.body.classList.contains('is-web') && window.matchMedia('(max-width:700px)').matches) {
+        document.getElementById('sidebar')?.classList.add('collapsed')
+    }
 
-    docEngine.whenSynced().then(() => {
-        rebindEditor(docEngine.text, docEngine)
+    engine.whenSynced().then(() => {
+        if (docEngine !== engine) return
+        rebindEditor(engine.text, engine)
         window.isUpdatingFromYjs = false
         if (pageHeader) pageHeader.render()
         if (pageProperties) pageProperties.render()
