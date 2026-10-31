@@ -26,6 +26,7 @@ import { deriveTeamKeys, deriveNoteKeys, deriveNoteSwarmKey } from './team-keys'
 import { RosterManager } from './team-roster'
 import { identity } from './identity'
 import { e2eeManager } from './e2ee'
+import { Config } from './config'
 
 // Max concurrent background ciphertext replicas per team (one y-webrtc room each).
 // Keeps total WebRTC connections sane on small teams; the tail replicates lazily.
@@ -42,6 +43,13 @@ export class P2PTeamManager {
     // teamId -> { teamId, rootKey, name, keys, rootEngine, roster, _notesObserver }
     this._teams = new Map()
     this._ready = false
+    const resume = () => {
+      for (const entry of this._teams.values()) this._queueWebSync(entry, 0)
+    }
+    if (typeof window !== 'undefined') window.addEventListener('online', resume)
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) resume()
+    })
   }
 
   // ── Lifecycle / persistence ────────────────────────────────────────────────
@@ -531,7 +539,7 @@ export class P2PTeamManager {
   }
 
   async _reconcileReplicas(entry) {
-    if (this._isWeb()) return // web build is dev-only; no durable ciphertext
+    if (this._isWeb()) { this._queueWebSync(entry); return }
     const live = []
     entry.notes.forEach((v, id) => { if (v && !v.deleted) live.push({ id, createdAt: v.createdAt ?? 0 }) })
     // Most-recently-created first so the freshest notes replicate within the cap.
@@ -573,6 +581,102 @@ export class P2PTeamManager {
     }
   }
 
+  // Web clients sweep the ENTIRE note index in small batches. Keeping only the
+  // newest MAX_REPLICAS rooms connected would strand older offline edits until
+  // somebody explicitly opened that note again.
+  _canWebSync(entry) {
+    if (!this._isWeb() || document.hidden || navigator.onLine === false ||
+        this._teams.get(entry.teamId) !== entry) return false
+    let mirror = Config.CLOUD_SYNC_URL || ''
+    try {
+      if (localStorage.getItem('notionless_cloud_sync_disabled') === '1') return false
+      mirror = localStorage.getItem('notionless_cloud_sync_url') || mirror
+    } catch (_) { /* use configured default when browser storage is unavailable */ }
+    return !!String(mirror).trim()
+  }
+
+  _queueWebSync(entry, delay = 250) {
+    if (!this._canWebSync(entry)) return
+    if (entry._webSyncRunning) { entry._webSyncAgain = true; return }
+    clearTimeout(entry._webSyncTimer)
+    entry._webSyncTimer = setTimeout(() => this._sweepWebNotes(entry), delay)
+  }
+
+  async _sweepWebNotes(entry) {
+    if (entry._webSyncRunning || !this._canWebSync(entry)) return
+    entry._webSyncRunning = true
+    entry._webSyncAgain = false
+    const ids = [...entry.notes.entries()]
+      .filter(([id, meta]) => meta && !meta.deleted && !entry._openNotes.has(id))
+      .map(([id]) => id)
+    let cursor = 0
+    let completed = 0
+    let failed = 0
+    let skipped = 0
+    const report = running => window.dispatchEvent(new CustomEvent('team:background-sync', {
+      detail: { teamId: entry.teamId, total: ids.length, completed, failed, skipped, running },
+    }))
+    report(true)
+    try {
+      const work = async () => {
+        while (cursor < ids.length && this._canWebSync(entry)) {
+          const id = ids[cursor++]
+          const result = await this._syncClosedWebNote(entry, id)
+          if (result === true) completed++
+          else if (result === false) failed++
+          else skipped++ // the editor took ownership; no upload acknowledgment
+          report(true)
+        }
+      }
+      // At most four note rooms per team, independent of the index size.
+      await Promise.all(Array.from({ length: Math.min(4, ids.length) }, work))
+    } finally {
+      entry._webSyncRunning = false
+      report(false)
+      // A note closed during a pass requests another immediate sweep. Periodic
+      // retries also cover Wi-Fi returning without an OS 'online' event.
+      this._queueWebSync(entry, entry._webSyncAgain ? 250 : 30000)
+    }
+  }
+
+  async _syncClosedWebNote(entry, id) {
+    if (entry._openNotes.has(id)) return null // editor-owned, not acknowledged here
+    let engine
+    entry.replicas.set(id, 'pending')
+    try {
+      const swarmKey = await deriveNoteSwarmKey(entry.rootKey, id)
+      const meta = entry.notes.get(id)
+      if (!this._canWebSync(entry) || entry.replicas.get(id) !== 'pending' ||
+          entry._openNotes.has(id) || !meta || meta.deleted) return false
+      engine = await openP2PDoc({ docId: id, swarmKey, replicaOnly: true })
+      if (entry.replicas.get(id) !== 'pending' || entry._openNotes.has(id) || !this._canWebSync(entry)) return false
+      entry.replicas.set(id, engine)
+      // openP2PDoc restores the local encrypted transport BEFORE connecting.
+      // Wait for the mirror's handshake and drained send buffer, not just for
+      // a signaling connection. A timeout leaves local edits for the next pass.
+      const deadline = Date.now() + 12000
+      while (Date.now() < deadline && this._canWebSync(entry)) {
+        if (entry.replicas.get(id) !== engine) return null
+        const provider = engine.network?.cloudProvider
+        if (provider?.synced && provider.wsconnected && provider.ws?.bufferedAmount === 0) {
+          await new Promise(resolve => setTimeout(resolve, 250))
+          if (provider.synced && provider.wsconnected && provider.ws?.bufferedAmount === 0) return true
+        }
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+      return false
+    } catch (error) {
+      console.warn('[P2PTeam] background note sync failed', id, error)
+      return false
+    } finally {
+      if (engine && entry.replicas.get(id) === engine) this._dropReplica(entry, id)
+      else {
+        if (engine) engine.destroy()
+        if (entry.replicas.get(id) === 'pending') entry.replicas.delete(id)
+      }
+    }
+  }
+
   _dropReplica(entry, noteId) {
     const eng = entry.replicas.get(noteId)
     entry.replicas.delete(noteId)
@@ -602,6 +706,7 @@ export class P2PTeamManager {
   async leaveTeam(teamId) {
     const t = this._teams.get(teamId)
     if (!t) return
+    clearTimeout(t._webSyncTimer)
     try { t.notes.unobserve(t._notesObserver) } catch (_e) {}
     try { t.teamMeta.unobserve(t._metaObserver) } catch (_e) {}
     try { t.noteAcl.unobserveDeep(t._aclObserver) } catch (_e) {}

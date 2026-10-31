@@ -64,7 +64,7 @@ export class Recents {
   }
 
   getList() {
-    return this.list.slice()
+    return this.list.filter(item => !item.path || !String(item.path).split('/').includes('.trash'))
   }
 
   /**
@@ -73,6 +73,7 @@ export class Recents {
    */
   async push(item) {
     if (!item || (!item.path && !item.docId)) return
+    if (item.path && String(item.path).split('/').includes('.trash')) return
     const id = makeId(item)
     const entry = {
       id,

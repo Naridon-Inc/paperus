@@ -42,19 +42,19 @@ export class DocumentEngine {
     // Awareness State (Part of Yjs but managed via Protocols)
     this.awareness = new Awareness(this.doc)
 
-    // Web thin-client: skip IndexedDB, rely purely on server-backed sync
+    // Web clients also keep local state so offline edits survive a restart.
     this.isWebClient = typeof document !== 'undefined' && document.body?.classList.contains('is-web')
 
     // Pending ops queue for beforeunload guard (web only)
     this._pendingOps = 0
     this._beforeUnloadHandler = null
 
-    // Durable Storage (Offline Support) — Electron only, skipped on Web
+    // Durable storage on both desktop and web, subject to the startup probe.
     try {
-        const idbEnabled = !this.isWebClient &&
-            (typeof window === 'undefined' || window.__opusIndexedDbEnabled !== false)
+        const idbEnabled = typeof window === 'undefined' || window.__opusIndexedDbEnabled !== false
         if (!idbEnabled) {
-          console.warn(`[Engine] IndexedDB ${this.isWebClient ? 'skipped (web thin-client)' : 'disabled by startup probe'}: ${docId}`)
+          if (this.isWebClient) window.dispatchEvent(new Event('offline:storage-error'))
+          console.warn(`[Engine] IndexedDB disabled by startup probe: ${docId}`)
           this.persistence = createNoopPersistence()
         } else {
         console.log(`[Engine] Initializing IndexedDB persistence: ${docId}`);
@@ -63,6 +63,7 @@ export class DocumentEngine {
 
         if (persistence && persistence._db && typeof persistence._db.catch === 'function') {
           persistence._db.catch((e) => {
+            if (this.isWebClient) window.dispatchEvent(new Event('offline:storage-error'))
             console.warn('[Engine] IndexedDB open failed, disabling persistence for this session:', e)
             try {
               this.doc.off('update', persistence._storeUpdate)
@@ -78,6 +79,7 @@ export class DocumentEngine {
         })
         }
     } catch (e) {
+        if (this.isWebClient) window.dispatchEvent(new Event('offline:storage-error'))
         console.warn('[Engine] Persistence failed (Offline support disabled):', e)
         this.persistence = createNoopPersistence()
     }
@@ -250,17 +252,19 @@ export class DocumentEngine {
   /**
    * Persist the encrypted transport doc to IndexedDB (`<docId>:enc`) so the
    * note's ciphertext survives restarts and a (re-formed) replica can serve the
-   * latest encrypted state without a live peer. Electron only — the web build is
-   * dev-only and intentionally ephemeral. Idempotent.
+   * latest encrypted state without a live peer. Works on web too. Idempotent.
    */
   _attachTransportPersistence() {
       if (this.transportPersistence || !this.transportDoc) return;
-      const idbEnabled = !this.isWebClient &&
-          (typeof window === 'undefined' || window.__opusIndexedDbEnabled !== false);
+      const idbEnabled = typeof window === 'undefined' || window.__opusIndexedDbEnabled !== false;
       if (!idbEnabled) return;
       try {
           this.transportPersistence = new IndexeddbPersistence(`${this.docId}:enc`, this.transportDoc);
+          this.transportPersistence._db?.catch(() => {
+              if (this.isWebClient) window.dispatchEvent(new Event('offline:storage-error'));
+          });
       } catch (e) {
+          if (this.isWebClient) window.dispatchEvent(new Event('offline:storage-error'));
           console.warn('[Engine] transport persistence failed (ciphertext not durable at rest):', e);
       }
   }
@@ -305,7 +309,8 @@ export class DocumentEngine {
     this._syncStatus.idb = 'synced'
 
     // Wait for Cloud Sync (if connected)
-    if (this.cloudProvider && !this.cloudProvider.synced) {
+    if (this.cloudProvider && !this.cloudProvider.synced &&
+        (typeof navigator === 'undefined' || navigator.onLine !== false)) {
         console.log('[Engine] Waiting for Cloud sync...');
         await new Promise(resolve => {
             const onSync = (isSynced) => {
@@ -468,29 +473,56 @@ export async function openP2PDoc({ docId, swarmKey, e2eeKey, identity, replicaOn
   if (!swarmKey) throw new Error('openP2PDoc: swarmKey is required')
 
   const engine = new DocumentEngine(docId)
+  try {
+    // E2EE / transport binding MUST be set up before connectP2P: connectP2P binds
+    // the WebRTC provider to engine.transportDoc when isEncrypted, so the transport
+    // doc has to exist first or peers would exchange plaintext CRDT ops (R1).
+    if (replicaOnly) {
+      // Blind ciphertext replica — joins the same swarm and syncs the encrypted
+      // transport doc without the content key (never decrypts).
+      await engine.setupReplicaOnly()
+    } else if (e2eeKey) {
+      await engine.setupE2EE(e2eeKey)
+    }
 
-  // E2EE / transport binding MUST be set up before connectP2P: connectP2P binds
-  // the WebRTC provider to engine.transportDoc when isEncrypted, so the transport
-  // doc has to exist first or peers would exchange plaintext CRDT ops (R1).
-  if (replicaOnly) {
-    // Blind ciphertext replica — joins the same swarm and syncs the encrypted
-    // transport doc without the content key (never decrypts).
-    await engine.setupReplicaOnly()
-  } else if (e2eeKey) {
-    await engine.setupE2EE(e2eeKey)
+    // Restore local tree/roster and ciphertext before callers inspect a team's
+    // maps. This must never depend on a network peer being available.
+    for (const persistence of [engine.persistence, engine.transportPersistence]) {
+      if (persistence?.whenSynced) {
+        // A blocked database must not hang team startup indefinitely.
+        let timer
+        try {
+          await Promise.race([
+            (async () => {
+              if (persistence._db) await persistence._db
+              await persistence.whenSynced
+            })(),
+            new Promise((_, reject) => {
+              timer = setTimeout(() => reject(new Error('Timed out restoring local document storage')), 8000)
+            }),
+          ])
+        } catch (error) {
+          if (typeof window !== 'undefined') window.dispatchEvent(new Event('offline:storage-error'))
+          throw error
+        } finally { clearTimeout(timer) }
+      }
+    }
+
+    engine.connectP2P(swarmKey)
+
+    // Replicas stay silent (no presence on rooms they're merely relaying).
+    if (identity && !replicaOnly) {
+      engine.presence.setUser({
+        id: identity.id,
+        name: identity.name || 'Guest',
+        color: identity.color || engine.presence.generateColor(identity.id || identity.email || docId),
+        email: identity.email || '',
+      })
+    }
+
+    return engine
+  } catch (error) {
+    engine.destroy()
+    throw error
   }
-
-  engine.connectP2P(swarmKey)
-
-  // Replicas stay silent (no presence on rooms they're merely relaying).
-  if (identity && !replicaOnly) {
-    engine.presence.setUser({
-      id: identity.id,
-      name: identity.name || 'Guest',
-      color: identity.color || engine.presence.generateColor(identity.id || identity.email || docId),
-      email: identity.email || '',
-    })
-  }
-
-  return engine
 }

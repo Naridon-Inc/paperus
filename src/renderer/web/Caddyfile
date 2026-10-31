@@ -44,6 +44,8 @@
 	# --- runtime config: never cache it ---
 	@nlconfig path /nlconfig.js
 	header @nlconfig Cache-Control "no-store"
+	@offlineMetadata path /sw.js /manifest.webmanifest
+	header @offlineMetadata Cache-Control "no-cache"
 
 	# --- everything else: the SPA ---
 	handle {

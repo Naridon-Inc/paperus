@@ -7176,3 +7176,9 @@ body.ai-dock-resizing .ai-dock-resizer::after { opacity: 0.7; }
 
 /* ── Breadcrumb-style topbar title (active conversation name) ───────────────── */
 .brain-title span { max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Completed checklist rows remain readable while showing their done state. */
+#editor .cm-line.cm-task-completed {
+    text-decoration: line-through;
+    opacity: 0.6;
+}

@@ -1,3 +1,5 @@
+import { checkboxChange, checklistOrder, saveChecklistOrder } from './checklist'
+
 /**
  * task-scan.js — the task + @mention scan engine (singleton).
  *
@@ -401,7 +403,6 @@ class TaskScan {
    */
   async toggleTask(task, done) {
     if (!task || !task.source) return { ok: false }
-    const wantChar = done ? 'x' : ' '
     const targetNorm = normalizeRest(task.rawText != null ? task.rawText : task.text)
 
     // -- TEAM doc (live Y.Text) --
@@ -411,11 +412,13 @@ class TaskScan {
         const full = ytext.toString()
         const hit = this._findCheckboxLine(full, targetNorm, task.line)
         if (!hit) { this.requestScan({ force: true }); return { ok: false } }
-        // Replace just the single state char inside the bracket.
         const absBox = hit.lineStart + hit.boxOffset
+        const change = checkboxChange(full, absBox, done, undefined, checklistOrder(ytext.doc.guid, ytext.doc))
+        if (!change) return { ok: false }
         ytext.doc.transact(() => {
-          ytext.delete(absBox, 1)
-          ytext.insert(absBox, wantChar)
+          saveChecklistOrder(ytext.doc.guid, change.order, ytext.doc)
+          ytext.delete(change.from, change.to - change.from)
+          ytext.insert(change.from, change.insert)
         }, 'task-toggle')
         await this.requestScan({ force: true })
         return { ok: true }
@@ -436,8 +439,12 @@ class TaskScan {
       const hit = this._findCheckboxLine(text, targetNorm, task.line)
       if (!hit) { this.requestScan({ force: true }); return { ok: false } }
       const abs = hit.lineStart + hit.boxOffset
-      const next = text.slice(0, abs) + wantChar + text.slice(abs + 1)
+      const docId = await api.invoke('fs:getDocId', task.source)
+      const change = checkboxChange(text, abs, done, undefined, checklistOrder(docId))
+      if (!change) return { ok: false }
+      const next = text.slice(0, change.from) + change.insert + text.slice(change.to)
       await api.writeFile(task.source, next)
+      saveChecklistOrder(docId, change.order)
       await this.requestScan({ force: true })
       return { ok: true }
     } catch (_e) {

@@ -21,13 +21,9 @@ RUN corepack enable && corepack prepare pnpm@10.27.0 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY patches/ ./patches/
 # --frozen-lockfile fails loudly if the lockfile drifted; matches CI.
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY . .
 RUN pnpm run build:web
-# Inject the runtime-config loader so the entrypoint can hand the SPA its
-# self-host settings (relay URL, accounts toggle, …) WITHOUT a rebuild. config.js
-# reads window.__NL_CONFIG first; nlconfig.js is written fresh at container start.
-RUN sed -i 's#<head>#<head><script src="/nlconfig.js"></script>#' /app/dist-web/index.html
 
 # ---- stage 2: serve ----
 FROM caddy:2-alpine

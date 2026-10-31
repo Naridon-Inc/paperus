@@ -122,6 +122,7 @@ export class TrashManager {
    */
   async trashFile(originalPath) {
     if (!originalPath || !(window.api && window.api.invoke)) return null
+    if (String(originalPath).split('/').includes(TRASH_DIRNAME)) return null
     if (typeof originalPath === 'string' && originalPath.startsWith('cloud:')) {
       // Cloud docs are not file-backed; not handled by soft-delete.
       return null

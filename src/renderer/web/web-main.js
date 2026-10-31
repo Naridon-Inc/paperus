@@ -241,6 +241,11 @@ window.api = {
                 knownFiles[idx] = newPath;
                 localStorage.setItem('setting_knownFiles', JSON.stringify(knownFiles));
             }
+            const registry = cloudDocRegistry._load();
+            for (const entry of Object.values(registry)) {
+                if (entry.path === oldPath) entry.path = newPath;
+            }
+            cloudDocRegistry._save(registry);
             return true;
         }
         if (channel === 'fs:delete') {

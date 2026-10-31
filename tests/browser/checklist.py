@@ -1,0 +1,46 @@
+import os
+from playwright.sync_api import sync_playwright
+with sync_playwright() as p:
+ engine=os.environ.get('PAPERUS_TEST_BROWSER','webkit')
+ args=['--host-resolver-rules='+os.environ['PAPERUS_TEST_HOST_MAPPING']] if os.environ.get('PAPERUS_TEST_HOST_MAPPING') and engine=='chromium' else []
+ b=getattr(p,engine).launch(args=args)
+ opts=p.devices['iPhone 13'].copy();opts.pop('default_browser_type',None)
+ c=b.new_context(**opts);c.add_init_script("localStorage.setItem('notionless_onboarded','1')")
+ page=c.new_page();page.goto(os.environ.get('PAPERUS_TEST_URL','http://localhost:18085'),wait_until='domcontentloaded')
+ page.wait_for_function('!!window.p2pTeamManager')
+ team=page.evaluate("async()=>{const m=window.p2pTeamManager,t=await m.createTeam('Dom');const n=await m.createNote(t.teamId,{title:'Zakupy'});window.dispatchEvent(new CustomEvent('cmd:open-team-note',{detail:{teamId:t.teamId,noteId:n}}));return t.teamId}")
+ page.wait_for_function("document.querySelector('#doc-title').value==='Zakupy'&&!window.isUpdatingFromYjs")
+ original='- [ ] Mleko\n- [ ] Chleb\n- [ ] Masło\n\nKoniec'
+ page.evaluate("text=>window.cmView.dispatch({changes:{from:0,to:window.cmView.state.doc.length,insert:text},selection:{anchor:text.length}})",original)
+ def settings():
+  page.evaluate("document.querySelector('#account-btn').click()")
+  page.locator('#wp-settings').click()
+ settings();page.locator('#completed-tasks-bottom').check()
+ page.wait_for_function("document.querySelector('#note-preferences-status').textContent==='Saved'")
+ page.locator('#note-preferences-close').click()
+ page.reload(wait_until='domcontentloaded')
+ page.wait_for_function('id=>window.p2pTeamManager?.getTeams().some(t=>t.teamId===id)',arg=team)
+ page.evaluate("id=>{const n=window.p2pTeamManager.getNotesTree(id)[0];window.dispatchEvent(new CustomEvent('cmd:open-team-note',{detail:{teamId:id,noteId:n.id}}))}",team)
+ page.wait_for_function("document.querySelector('#doc-title').value==='Zakupy'&&!window.isUpdatingFromYjs")
+ page.evaluate('window.cmView.dispatch({selection:{anchor:window.cmView.state.doc.length}})')
+ page.locator('.cm-line').filter(has_text='Mleko').locator('.cm-checkbox').tap()
+ expected='- [ ] Chleb\n- [ ] Masło\n- [x] Mleko\n\nKoniec'
+ page.wait_for_function('text=>window.cmView.state.doc.toString()===text',arg=expected)
+ assert page.locator('.cm-line').filter(has_text='Mleko').locator('.cm-checkbox').is_checked()
+ assert page.locator('.cm-line').filter(has_text='Mleko').evaluate("e=>getComputedStyle(e).textDecorationLine.includes('line-through')")
+ page.reload(wait_until='domcontentloaded')
+ page.wait_for_function('id=>window.p2pTeamManager?.getTeams().some(t=>t.teamId===id)',arg=team)
+ page.evaluate("id=>{const n=window.p2pTeamManager.getNotesTree(id)[0];window.dispatchEvent(new CustomEvent('cmd:open-team-note',{detail:{teamId:id,noteId:n.id}}))}",team)
+ page.wait_for_function("document.querySelector('#doc-title').value==='Zakupy'&&!window.isUpdatingFromYjs")
+ page.evaluate('window.cmView.dispatch({selection:{anchor:window.cmView.state.doc.length}})')
+ page.locator('.cm-line').filter(has_text='Mleko').locator('.cm-checkbox').tap()
+ expected=original
+ page.wait_for_function('text=>window.cmView.state.doc.toString()===text',arg=expected)
+ settings();assert page.locator('#completed-tasks-bottom').is_checked()
+ page.locator('#completed-tasks-bottom').uncheck()
+ page.wait_for_function("document.querySelector('#note-preferences-status').textContent==='Saved'")
+ page.locator('#note-preferences-close').click()
+ page.locator('.cm-line').filter(has_text='Chleb').locator('.cm-checkbox').tap()
+ page.wait_for_function("window.cmView.state.doc.toString().startsWith('- [ ] Mleko\\n- [x] Chleb')")
+ print('Mobile checklist taps: complete moves down, uncheck moves up, checked appearance and disabled option: PASS')
+ b.close()

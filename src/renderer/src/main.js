@@ -41,6 +41,9 @@ import { ExportMenu } from './export'
 import { ImportManager } from './import'
 import { TrashManager } from './trash'
 import { TeamspacesManager } from './teamspaces'
+import { getDefaultNoteTeamId, openNotePreferences } from './note-preferences'
+import { titleFromContent, isUntitled } from './auto-title'
+import { loadChecklistPreference } from './checklist'
 import { P2PTeamManager } from './p2p-team'
 import {
   openCreateTeamDialog, openJoinTeamDialog, openClaimDialog, openInviteDialog, openRosterDialog,
@@ -1537,6 +1540,7 @@ function initDerivedEngines() {
 }
 
 async function init() {
+    await loadChecklistPreference()
   try {
     window.scrollTo(0, 0)
     document.documentElement.scrollLeft = 0
@@ -1632,6 +1636,14 @@ async function init() {
     const toggleSidebar = () => { sidebar.classList.toggle('collapsed') }
     if (collapseBtn) collapseBtn.addEventListener('click', toggleSidebar)
     if (expandBtn) expandBtn.addEventListener('click', toggleSidebar)
+    if (document.body.classList.contains('is-web')) {
+      const sidebarDismiss = document.createElement('button')
+      sidebarDismiss.type = 'button'
+      sidebarDismiss.className = 'mobile-sidebar-dismiss'
+      sidebarDismiss.setAttribute('aria-label', 'Close sidebar')
+      sidebarDismiss.addEventListener('click', () => sidebar.classList.add('collapsed'))
+      document.querySelector('.wrapper').appendChild(sidebarDismiss)
+    }
     
     // Special "view" tabs (Company Brain / Plugin Lab / Plugin Studio) get their
     // OWN tab in the bar instead of overlaying the active file tab. Their tab keys
@@ -1647,6 +1659,11 @@ async function init() {
     tabManager = new TabManager(async (path) => {
         const view = VIEW_TABS[path]
         if (view) { view.show(); return }
+        if (typeof path === 'string' && path.startsWith('team:')) {
+            const [, teamId, noteId] = path.split(':')
+            await openTeamNote(teamId, noteId)
+            return
+        }
         await loadFileContent(path)
     })
     tabManager.onEmptyState = showNoFileSelected
@@ -2633,13 +2650,35 @@ async function init() {
             || (activeItem && activeItem.dataset.path)
             || (currentOpenPath && !String(currentOpenPath).startsWith('cloud:') ? currentOpenPath : null)
         if (!targetPath) return
+        if (String(targetPath).split('/').includes('.trash')) return
         if (!confirm('Move to trash?')) return
-        // Soft-delete: move into .trash/ and record an undoable entry. Falls back
-        // to the legacy hard-delete (OS trash) only if the soft-delete path fails.
+        if (currentOpenPath === targetPath) {
+            await saveCurrentFile()
+            clearTimeout(saveTimer)
+            clearTimeout(renameTimer)
+            if (projectionManager) { projectionManager.destroy(); projectionManager = null }
+            if (docEngine) { docEngine.destroy(); docEngine = null }
+            currentOpenPath = null
+        }
+        // Move into .trash/ and keep the original if the move fails.
         let moved = null
         if (trashManager) moved = await trashManager.trashFile(targetPath).catch(() => null)
         if (!moved) {
-            await window.api.invoke('fs:delete', targetPath)
+            alert('Could not move the note to Trash. Your file was kept.')
+            return
+        }
+        if (tabManager) {
+            tabManager.tabs = tabManager.tabs.filter(tab => tab.path !== targetPath)
+            tabManager.activeTabIndex = Math.min(tabManager.activeTabIndex, tabManager.tabs.length - 1)
+            tabManager.renderTabs()
+        }
+        if (await window.api.getSettings('lastOpenedFile') === targetPath) {
+            await window.api.setSettings('lastOpenedFile', null)
+        }
+        if (recentsManager) {
+            recentsManager.list = recentsManager.list.filter(item => item.path !== targetPath)
+            await recentsManager._persist()
+            await sidebarManager.renderRecents()
         }
         await loadProject(null)
         showNoFileSelected()
@@ -2912,6 +2951,7 @@ async function renderWorkspacePopover() {
                 <div class="wp-menu-item" id="wp-open-folder"><i class="fas fa-folder-open" style="width:16px;text-align:center;color:#999;"></i> <span>Open folder</span></div>
                 <div class="wp-menu-item" id="wp-load-workspace"><i class="fas fa-project-diagram" style="width:16px;text-align:center;color:#999;"></i> <span>Load workspace…</span></div>
                 <div class="wp-menu-item" id="wp-save-workspace"><i class="fas fa-save" style="width:16px;text-align:center;color:#999;"></i> <span>Save workspace…</span></div>
+                <div class="wp-menu-item" id="wp-settings"><i class="fas fa-cog" style="width:16px;text-align:center;color:#999;"></i> <span>Settings</span></div>
             </div>
             <div class="wp-divider"></div>
             <div class="wp-section-header">Teams · peer-to-peer</div>
@@ -2957,6 +2997,7 @@ async function renderWorkspacePopover() {
         document.getElementById('wp-open-folder').onclick = async () => { hide(); await openProject() }
         document.getElementById('wp-load-workspace').onclick = async () => { hide(); await openWorkspace() }
         document.getElementById('wp-save-workspace').onclick = async () => { hide(); await saveWorkspace() }
+        document.getElementById('wp-settings').onclick = () => { hide(); void openNotePreferences(p2pTeamManager) }
         document.getElementById('wp-new-team').onclick = () => { hide(); window.dispatchEvent(new CustomEvent('cmd:create-team')) }
         document.getElementById('wp-join-team').onclick = () => { hide(); window.dispatchEvent(new CustomEvent('cmd:join-team')) }
         const wpPlugins = document.getElementById('wp-plugins')
@@ -3019,6 +3060,34 @@ async function promptSaveVersion() {
 }
 
 async function createNewNote(initialContent = null) {
+  const teamId = await getDefaultNoteTeamId()
+  if (teamId) {
+    if (!p2pTeamManager?.getTeams().some(team => team.teamId === teamId)) {
+      alert('Your default team is unavailable. Choose a location in Settings before creating a note.')
+      await openNotePreferences(p2pTeamManager)
+      return
+    }
+    try {
+      const title = initialContent?.match(/^# (.*)(\n|$)/)?.[1]?.trim() || 'Untitled'
+      const noteId = await p2pTeamManager.createNote(teamId, { title })
+      const engine = await p2pTeamManager.openNote(teamId, noteId)
+      if (initialContent) {
+        await engine.whenSynced()
+        engine.text.insert(0, initialContent)
+      }
+      renderP2PTeams()
+      hideNoFileSelected()
+      mountP2PEngineInEditor(engine, {
+        docName: title,
+        tabKey: `team:${teamId}:${noteId}`,
+        teamNote: { teamId, noteId },
+      })
+    } catch (error) {
+      console.error('[Main] Could not create note in default team', error)
+      alert('Could not create the note in your default team. Please try again.')
+    }
+    return
+  }
   const activeItem = document.querySelector('.tree-item.active')
   let currentPath = Store.projectPath 
   if (activeDirectory) currentPath = activeDirectory
@@ -3350,11 +3419,15 @@ async function renameFile(newTitle) {
     const dir = await window.api.invoke('path:dirname', oldPath)
     const ext = await window.api.invoke('path:extname', oldPath) || '.md'
     const safeTitle = newTitle.replace(/[\\/:*?"<>|]/g, '_')
-    const newPath = `${dir}/${safeTitle}${ext}`
+    let newPath = `${dir}/${safeTitle}${ext}`
     
     if (oldPath === newPath) return
     try {
+        let suffix = 1
+        while (newPath !== oldPath && await window.api.pathExists(newPath)) newPath = `${dir}/${safeTitle} ${suffix++}${ext}`
+        if (newPath === oldPath) return
         await window.api.invoke('fs:rename', oldPath, newPath)
+        if (currentOpenPath === oldPath) currentOpenPath = newPath
         
         // Update lastOpenedFile if it was the one renamed
         const lastFile = await window.api.getSettings('lastOpenedFile');
@@ -3396,6 +3469,7 @@ function handleTextChange(update) {
   if (window.isUpdatingFromYjs) return
 
   const fullText = update.state.doc.toString()
+  scheduleAutomaticTitle()
   const textTrimmed = fullText.trim()
   const words = textTrimmed ? textTrimmed.split(/\s+/).length : 0
   const lines = update.state.doc.lines
@@ -3403,9 +3477,7 @@ function handleTextChange(update) {
   const wordCountEl = document.getElementById('word-count');
   if (wordCountEl) wordCountEl.textContent = `${lines}L ${words}W`
 
-    // Title/body are decoupled (Notion model): the title is the filename, edited
-    // via the big page title. A leading body "# " is plain content and must NOT
-    // hijack the filename, so the legacy body-H1 → title sync is disabled.
+    // Only untitled/automatically named notes derive their title from the body.
 
     if (docEngine && docEngine.presence) {
         docEngine.presence.setTyping(true)
@@ -3429,9 +3501,41 @@ setInterval(async () => {
     }
 }, 10 * 60 * 1000)
 
-async function handleTitleChange(e) {
+let automaticTitleTimer
+function scheduleAutomaticTitle() {
+  clearTimeout(automaticTitleTimer)
+  const engine = docEngine
+  if (!engine || e2eeReadOnlyLocked) return
+  automaticTitleTimer = setTimeout(async () => {
+    if (docEngine !== engine || window.isUpdatingFromYjs || window.appState?.isSettingsOpen) return
+    const input = document.getElementById('doc-title')
+    const metadata = engine.doc.getMap('metadata')
+    const current = input?.value || ''
+    if (metadata.get('manualTitle')) return
+    if (!isUntitled(current) && current !== metadata.get('automaticTitle')) return
+    // Do not interfere while the user is entering a title.
+    if (document.activeElement?.matches('.page-title, #doc-title')) return
+    const title = titleFromContent(engine.text.toString())
+    if (!title || title === current) return
+    try {
+      await handleTitleChange({ target: { value: title } }, true)
+      if (docEngine !== engine) return
+      input.value = title
+      pageHeader?.syncTitle()
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+    } catch (error) { console.warn('[Main] Automatic title failed', error) }
+  }, 1200)
+}
+
+async function handleTitleChange(e, automatic = false) {
   if (window.appState && window.appState.isSettingsOpen) return
   const newTitle = e.target.value.trim() || 'Untitled'
+  if (docEngine) {
+    const metadata = docEngine.doc.getMap('metadata')
+    // Event listeners pass only the event; automatic calls explicitly pass true.
+    if (automatic === true) metadata.set('automaticTitle', newTitle)
+    else metadata.set('manualTitle', !isUntitled(newTitle) && newTitle !== metadata.get('automaticTitle'))
+  }
 
   // Synced P2P team note: the title lives in the team's note index (tree), not
   // on the filesystem. Rename it there and skip the local file save path.
@@ -3581,6 +3685,7 @@ function sanitizeKnownFiles(files = []) {
     const p = String(raw || '').trim().replace(/\\/g, '/')
     if (!p) continue
     if (p.startsWith('cloud:')) continue
+    if (p.split('/').includes('.trash')) continue
     if (p.startsWith('folder:')) continue
     if (/\.migration-backup$/i.test(p)) continue
     if (/\.local_conflict$/i.test(p)) continue
@@ -3598,9 +3703,7 @@ async function loadProject(path) {
   }
   const knownFilesRaw = await window.api.getSettings('knownFiles') || []
   const knownFiles = sanitizeKnownFiles(knownFilesRaw)
-  if (knownFiles.length !== knownFilesRaw.length) {
-      await window.api.setSettings('knownFiles', knownFiles)
-  }
+  // Filtering is a view operation. Keep Trash records intact for restoration.
   if (knownProjects.length === 0 && knownFiles.length === 0) {
       await sidebarManager.renderWorkspace([], [])
       return
@@ -3650,9 +3753,13 @@ function mountP2PEngineInEditor(engine, { docName, tabKey, teamNote = null } = {
     if (moreMenu) moreMenu.docEngine = docEngine
     currentOpenPath = null
     currentTeamNote = teamNote
+    if (document.body.classList.contains('is-web') && window.matchMedia('(max-width:700px)').matches) {
+        document.getElementById('sidebar')?.classList.add('collapsed')
+    }
 
-    docEngine.whenSynced().then(() => {
-        rebindEditor(docEngine.text, docEngine)
+    engine.whenSynced().then(() => {
+        if (docEngine !== engine) return
+        rebindEditor(engine.text, engine)
         window.isUpdatingFromYjs = false
         if (pageHeader) pageHeader.render()
         if (pageProperties) pageProperties.render()
@@ -3729,6 +3836,7 @@ function renderP2PTeams() {
     }
 
     const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    const canHover = window.matchMedia('(hover:hover) and (pointer:fine)').matches
 
     teams.forEach((team) => {
         const group = document.createElement('div')
@@ -3783,8 +3891,14 @@ function renderP2PTeams() {
                     </div>
                     <span style="font-size:13px;color:${locked ? '#aaa' : '#333'};font-style:${locked ? 'italic' : 'normal'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">${esc(title)}</span>
                     ${accessBtn}${delBtn}`
-                row.onmouseenter = () => { row.querySelectorAll('.p2p-del-note,.p2p-note-access').forEach((x) => { x.style.opacity = '0.8' }) }
-                row.onmouseleave = () => { row.querySelectorAll('.p2p-del-note,.p2p-note-access').forEach((x) => { x.style.opacity = '0' }) }
+                row.style.touchAction = 'manipulation'
+                if (canHover) {
+                    row.onmouseenter = () => { row.querySelectorAll('.p2p-del-note,.p2p-note-access').forEach((x) => { x.style.opacity = '0.8' }) }
+                    row.onmouseleave = () => { row.querySelectorAll('.p2p-del-note,.p2p-note-access').forEach((x) => { x.style.opacity = '0' }) }
+                } else {
+                    // Safari can consume the first tap when hover reveals controls.
+                    row.querySelectorAll('.p2p-del-note,.p2p-note-access').forEach(x => { x.style.opacity = '0.8' })
+                }
                 row.onclick = (ev) => {
                     if (ev.target.classList.contains('p2p-del-note') || ev.target.classList.contains('p2p-note-access')) return
                     if (locked) {
@@ -3818,8 +3932,12 @@ function renderP2PTeams() {
             children.appendChild(empty)
         }
 
-        header.onmouseenter = () => { const a = header.querySelector('.ts-group-actions'); if (a) a.style.display = 'flex' }
-        header.onmouseleave = () => { const a = header.querySelector('.ts-group-actions'); if (a) a.style.display = 'none' }
+        if (canHover) {
+            header.onmouseenter = () => { const a = header.querySelector('.ts-group-actions'); if (a) a.style.display = 'flex' }
+            header.onmouseleave = () => { const a = header.querySelector('.ts-group-actions'); if (a) a.style.display = 'none' }
+        } else {
+            header.querySelector('.ts-group-actions').style.display = 'flex'
+        }
         header.onclick = (ev) => {
             if (ev.target.closest('.ts-group-actions')) return
             const expanded = children.classList.toggle('expanded')
@@ -3853,6 +3971,7 @@ function renderP2PTeams() {
 }
 
 async function loadFileContent(path) {
+  if (typeof path !== 'string' || !path || path.split('/').includes('.trash')) return
   if (typeof path === 'string' && path.startsWith('cloud:')) {
       const cloudDocId = path.slice('cloud:'.length).split(':')[0].replace(/\.migration-backup$/i, '').trim()
       if (cloudDocId) {

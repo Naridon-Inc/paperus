@@ -531,6 +531,7 @@ export class SidebarManager {
             filesUl.className = 'tree-list nested-list expanded'
             
             for (const filePath of files) {
+                if (String(filePath).split('/').includes('.trash')) continue
                 if (await window.api.pathExists(filePath)) {
                     const name = await window.api.basename(filePath)
                     const displayName = name.replace(/_/g, ' ')
