@@ -13,7 +13,7 @@
  * HTMLBlock branch.
  *
  * SECURITY: the generated iframe is sandboxed
- * (`allow-scripts allow-same-origin allow-popups allow-presentation`) and
+ * (`allow-scripts allow-presentation`) and
  * `loading="lazy"`. Raw user-supplied <iframe> HTML is NOT injected verbatim —
  * we parse out its `src` and rebuild a sandboxed iframe ourselves.
  */
@@ -27,11 +27,15 @@ const LOOM_RE = /loom\.com\/(?:share|embed)\/([\w-]+)/i
 
 /** Resolve a provider page URL to a sandboxable embed src, or null. */
 export function resolveEmbedSrc(url) {
-  const u = String(url).trim()
+  let parsed
+  try { parsed = new URL(String(url).trim()) } catch { return null }
+  if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.port) return null
+  const host = parsed.hostname
+  const u = parsed.href
   let m
-  if ((m = u.match(YT_RE))) return `https://www.youtube.com/embed/${m[1]}`
-  if ((m = u.match(VIMEO_RE))) return `https://player.vimeo.com/video/${m[1]}`
-  if ((m = u.match(LOOM_RE))) return `https://www.loom.com/embed/${m[1]}`
+  if (['youtube.com', 'www.youtube.com', 'youtu.be'].includes(host) && (m = u.match(YT_RE))) return `https://www.youtube.com/embed/${m[1]}`
+  if (['vimeo.com', 'www.vimeo.com', 'player.vimeo.com'].includes(host) && (m = u.match(VIMEO_RE))) return `https://player.vimeo.com/video/${m[1]}`
+  if (['loom.com', 'www.loom.com'].includes(host) && (m = u.match(LOOM_RE))) return `https://www.loom.com/embed/${m[1]}`
   return null
 }
 
@@ -83,14 +87,19 @@ export class EmbedWidget extends WidgetType {
     const wrap = document.createElement('div')
     wrap.className = 'cm-embed'
 
+    const safeSrc = resolveEmbedSrc(this.src)
+    if (!safeSrc) {
+      wrap.textContent = 'Unsupported or unsafe embed URL'
+      return wrap
+    }
     const frame = document.createElement('iframe')
     frame.className = 'cm-embed-iframe'
-    frame.src = this.src
+    frame.referrerPolicy = 'no-referrer'
     frame.loading = 'lazy'
     frame.setAttribute('frameborder', '0')
     frame.setAttribute(
       'sandbox',
-      'allow-scripts allow-same-origin allow-popups allow-presentation'
+      'allow-scripts allow-presentation'
     )
     frame.setAttribute(
       'allow',
@@ -98,6 +107,7 @@ export class EmbedWidget extends WidgetType {
     )
     frame.allowFullscreen = true
 
+    frame.src = safeSrc
     wrap.appendChild(frame)
     return wrap
   }

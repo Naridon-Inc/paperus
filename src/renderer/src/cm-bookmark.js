@@ -6,7 +6,7 @@
  *   - a line `bookmark: <url>`
  *   - a bare non-embed URL on its own line (embeds win via cm-embed.js)
  *
- * Renders a clickable card: a favicon (Google's s2 favicon service), the
+ * Renders a clickable card: a local link icon, the
  * hostname as the title, and the full URL muted underneath. Clicking opens the
  * URL externally (Electron `shell` if exposed, else a new browser tab).
  *
@@ -63,12 +63,10 @@ export class BookmarkWidget extends WidgetType {
     const card = document.createElement('div')
     card.className = 'cm-bookmark'
 
-    const fav = document.createElement('img')
+    const fav = document.createElement('span')
     fav.className = 'cm-bookmark-favicon'
-    fav.alt = ''
-    fav.loading = 'lazy'
-    fav.src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(this.host)}&sz=64`
-    fav.onerror = () => { fav.style.visibility = 'hidden' }
+    fav.textContent = '↗'
+    fav.setAttribute('aria-hidden', 'true')
 
     const info = document.createElement('div')
     info.className = 'cm-bookmark-info'
